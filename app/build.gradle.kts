@@ -47,7 +47,11 @@ android {
         val appName = if (releaseTag == "experimental") "LTE" else "test"
         resValue("string", "app_name", appName)
         val isExperimental = releaseTag == "experimental"
+        val isExperimental = releaseTag == "experimental"
         buildConfigField("boolean", "IS_EXPERIMENTAL", isExperimental.toString())
+        
+        val googleApiKey = keystoreProperties["google.api.key"] as? String ?: "\"\""
+        buildConfigField("String", "GOOGLE_API_KEY", googleApiKey)
     }
 
     ksp {

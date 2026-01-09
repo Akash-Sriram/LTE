@@ -15,12 +15,12 @@ import retrofit2.http.Headers
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
-import retrofit2.http.Url
+import com.github.libretube.test.BuildConfig
 
 private const val GITHUB_API_URL = "https://api.github.com/repos/akashsriramganapathy/LibreTube/releases/latest"
 private const val SB_API_URL = "https://sponsor.ajay.app"
 private const val RYD_API_URL = "https://returnyoutubedislikeapi.com"
-private const val GOOGLE_API_KEY = "AIzaSyDyT5W0Jh49F30Pqqtyfdf7pDLFKLJoAnw"
+private const val GOOGLE_API_KEY = BuildConfig.GOOGLE_API_KEY
 const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.3"
 
 interface ExternalApi {
