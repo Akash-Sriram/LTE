@@ -620,19 +620,7 @@ class MainActivity : BaseActivity() {
         return super.onKeyUp(keyCode, event)
     }
 
-    /**
-     * Attempt to run code on the player fragment if running
-     * Returns true if a running player fragment was found and the action got consumed, else false
-     */
-    fun runOnPlayerFragment(action: PlayerFragment.() -> Boolean): Boolean {
-        // Compose player replacement: commands should be sent via ViewModel
-        return false
-    }
 
-    fun runOnAudioPlayerFragment(action: AudioPlayerFragment.() -> Boolean): Boolean {
-        // Compose player replacement: commands should be sent via ViewModel
-        return false
-    }
 
     fun startPlaylistExport(
         playlistId: String,

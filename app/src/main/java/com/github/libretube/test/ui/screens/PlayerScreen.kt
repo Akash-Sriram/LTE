@@ -16,6 +16,7 @@ import androidx.compose.foundation.gestures.snapTo
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -263,12 +264,25 @@ fun DraggablePlayerPanel(
             }
         }
 
+        
+        val currentStream by viewModel.currentStream.collectAsState()
+        val isPlaying by viewModel.isPlaying.collectAsState()
+        val playbackPosition by viewModel.playbackPosition.collectAsState()
+        val duration by viewModel.duration.collectAsState()
+        val playbackProgress = if (duration > 0) (playbackPosition.toFloat() / duration) else 0f
+        
         MiniPlayerContent(
             modifier = Modifier
                 .alpha(progress)
                 .fillMaxWidth()
                 .height(miniHeight)
                 .padding(start = miniWidth),
+            title = currentStream?.title ?: "",
+            channelName = currentStream?.uploaderName ?: "",
+            thumbnailUrl = currentStream?.thumbnail,
+            isPlaying = isPlaying,
+            progress = playbackProgress,
+            onPlayPauseClick = { viewModel.togglePlayPause() },
             onClose = onClose
         )
 
@@ -286,18 +300,66 @@ fun DraggablePlayerPanel(
 @Composable
 fun MiniPlayerContent(
     modifier: Modifier = Modifier,
+    title: String = "",
+    channelName: String = "",
+    thumbnailUrl: String? = null,
+    isPlaying: Boolean = false,
+    progress: Float = 0f,
+    onPlayPauseClick: () -> Unit = {},
     onClose: () -> Unit
 ) {
-    Row(
-        modifier = modifier
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text("Mini Player", modifier = Modifier.weight(1f)) 
+    Column(modifier = modifier) {
+        // Progress bar at top
+        if (progress > 0f) {
+            LinearProgressIndicator(
+                progress = progress,
+                modifier = Modifier.fillMaxWidth().height(2.dp),
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
         
-        IconButton(onClick = onClose) {
-            Icon(Icons.Default.Close, contentDescription = "Close")
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Metadata column
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
+                if (title.isNotEmpty()) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                }
+                if (channelName.isNotEmpty()) {
+                    Text(
+                        text = channelName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                }
+            }
+            
+            // Play/Pause button
+            IconButton(onClick = onPlayPauseClick) {
+                Icon(
+                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (isPlaying) "Pause" else "Play"
+                )
+            }
+            
+            // Close button
+            IconButton(onClick = onClose) {
+                Icon(Icons.Default.Close, contentDescription = "Close")
+            }
         }
     }
 }
