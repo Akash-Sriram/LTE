@@ -31,13 +31,12 @@ object NavigationHelper {
         val activity = ContextHelper.unwrapActivity<MainActivity>(context)
         activity.navController.navigate(NavDirections.openChannel(channelUrlOrId.toID()))
         try {
-            // Removed: MainActivity no longer uses MotionLayout (migrated to Compose)
             // minimize player if currently expanded
-            // if (activity.binding.mainMotionLayout.progress == 0f) {
-            //     activity.binding.mainMotionLayout.transitionToEnd()
-            //     activity.findViewById<SingleViewTouchableMotionLayout>(R.id.playerMotionLayout)
-            //         .transitionToEnd()
-            // }
+            if (activity.binding.mainMotionLayout.progress == 0f) {
+                activity.binding.mainMotionLayout.transitionToEnd()
+                activity.findViewById<SingleViewTouchableMotionLayout>(R.id.playerMotionLayout)
+                    .transitionToEnd()
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
