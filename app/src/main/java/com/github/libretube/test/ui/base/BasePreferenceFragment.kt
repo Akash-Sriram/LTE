@@ -37,7 +37,8 @@ abstract class BasePreferenceFragment : PreferenceFragmentCompat() {
     override fun onStart() {
         super.onStart()
 
-        settingsActivity?.changeTopBarText(getString(titleResourceId))
+        // Removed: SettingsActivity is now Compose-based, no changeTopBarText method
+        // settingsActivity?.changeTopBarText(getString(titleResourceId))
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

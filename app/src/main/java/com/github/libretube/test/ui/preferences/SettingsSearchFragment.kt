@@ -46,8 +46,8 @@ class SettingsSearchFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Hide the main activity toolbar
-        (activity as? SettingsActivity)?.binding?.toolbar?.visibility = View.GONE
+        // Removed: SettingsActivity is now Compose-based, no binding property
+        // (activity as? SettingsActivity)?.binding?.toolbar?.visibility = View.GONE
 
         // Handle system insets (Status Bar)
         binding.searchBarContainer.onSystemInsets { view, insets ->
@@ -198,8 +198,8 @@ class SettingsSearchFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        // Restore the main activity toolbar
-        (activity as? SettingsActivity)?.binding?.toolbar?.visibility = View.VISIBLE
+        // Removed: SettingsActivity is now Compose-based, no binding property
+        // (activity as? SettingsActivity)?.binding?.toolbar?.visibility = View.VISIBLE
         _binding = null
     }
 

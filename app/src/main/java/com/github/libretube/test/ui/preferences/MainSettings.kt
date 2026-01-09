@@ -49,20 +49,23 @@ class MainSettings : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        (activity as? SettingsActivity)?.changeTopBarText(getString(R.string.settings))
+        // Removed: SettingsActivity is now Compose-based, no changeTopBarText method
+        // (activity as? SettingsActivity)?.changeTopBarText(getString(R.string.settings))
     }
 
     private fun handleItemClick(key: String) {
         val settingsActivity = activity as? SettingsActivity ?: return
         
         when (key) {
-            "general" -> settingsActivity.redirectTo<GeneralSettings>()
-            "downloads" -> settingsActivity.redirectTo<DownloadSettings>()
-            "appearance" -> settingsActivity.redirectTo<AppearanceSettings>()
-            "player" -> settingsActivity.redirectTo<PlayerSettings>()
-            "content" -> settingsActivity.redirectTo<ContentSettings>()
-            "data_backup" -> settingsActivity.redirectTo<DataSettings>()
-            "notifications" -> settingsActivity.redirectTo<NotificationSettings>()
+            // Removed: SettingsActivity is now Compose-based with NavHost navigation
+            // These redirectTo calls are no longer needed
+            // "general" -> settingsActivity.redirectTo<GeneralSettings>()
+            // "downloads" -> settingsActivity.redirectTo<DownloadSettings>()
+            // "appearance" -> settingsActivity.redirectTo<AppearanceSettings>()
+            // "player" -> settingsActivity.redirectTo<PlayerSettings>()
+            // "content" -> settingsActivity.redirectTo<ContentSettings>()
+            // "data_backup" -> settingsActivity.redirectTo<DataSettings>()
+            // "notifications" -> settingsActivity.redirectTo<NotificationSettings>()
             "update" -> {
                 settingsActivity.lifecycleScope.launch {
                     UpdateChecker(requireContext()).checkUpdate(true)

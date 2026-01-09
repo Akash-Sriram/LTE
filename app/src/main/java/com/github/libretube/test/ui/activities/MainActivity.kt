@@ -572,30 +572,12 @@ class MainActivity : BaseActivity() {
         }
 
         intent.getStringExtra(IntentData.videoId)?.let {
-            // the below explained work around only seems to work on Android 11 and above
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && binding.bottomNav.menu.isNotEmpty()) {
-                // the bottom navigation bar has to be created before opening the video
-                // otherwise the player layout measures aren't calculated properly
-                // and the miniplayer is opened at a closed state and overlapping the navigation bar
-                binding.bottomNav.viewTreeObserver.addOnGlobalLayoutListener(object :
-                    ViewTreeObserver.OnGlobalLayoutListener {
-                    override fun onGlobalLayout() {
-                        NavigationHelper.navigateVideo(
-                            context = this@MainActivity,
-                            videoId = it,
-                            timestamp = intent.getLongExtra(IntentData.timeStamp, 0L)
-                        )
-
-                        binding.bottomNav.viewTreeObserver.removeOnGlobalLayoutListener(this)
-                    }
-                })
-            } else {
-                NavigationHelper.navigateVideo(
-                    context = this@MainActivity,
-                    videoId = it,
-                    timestamp = intent.getLongExtra(IntentData.timeStamp, 0L)
-                )
-            }
+            // Direct navigation - Compose handles layout timing
+            NavigationHelper.navigateVideo(
+                context = this@MainActivity,
+                videoId = it,
+                timestamp = intent.getLongExtra(IntentData.timeStamp, 0L)
+            )
 
             return true
         }

@@ -111,7 +111,8 @@ class AudioPlayerFragment : Fragment(R.layout.fragment_audio_player), AudioPlaye
     private lateinit var audioHelper: AudioHelper
     private val activity get() = context as BaseActivity
     private val mainActivity get() = activity as? MainActivity
-    private val mainActivityMotionLayout get() = mainActivity?.binding?.mainMotionLayout
+    // Removed: MainActivity no longer uses MotionLayout (migrated to Compose)
+    // private val mainActivityMotionLayout get() = mainActivity?.binding?.mainMotionLayout
     private val viewModel: CommonPlayerViewModel by activityViewModels()
     private val chaptersModel: ChaptersViewModel by activityViewModels()
     
@@ -228,7 +229,7 @@ class AudioPlayerFragment : Fragment(R.layout.fragment_audio_player), AudioPlaye
         }
 
         binding.minimizePlayer.setOnClickListener {
-            mainActivityMotionLayout?.transitionToStart()
+            // mainActivityMotionLayout?.transitionToStart() // Removed: Compose migration
             binding.playerMotionLayout.transitionToEnd()
         }
 
@@ -370,7 +371,7 @@ class AudioPlayerFragment : Fragment(R.layout.fragment_audio_player), AudioPlaye
                 
                 binding.audioPlayerContainer.isClickable = false
                 binding.playerMotionLayout.transitionToEnd()
-                mainActivityMotionLayout?.transitionToEnd()
+                // mainActivityMotionLayout?.transitionToEnd() // Removed: Compose migration
                 mainActivity?.requestOrientationChange()
             }
 
@@ -664,7 +665,7 @@ class AudioPlayerFragment : Fragment(R.layout.fragment_audio_player), AudioPlaye
 
     @SuppressLint("ClickableViewAccessibility")
     private fun initializeTransitionLayout() {
-        mainActivityMotionLayout?.progress = 0F
+        // mainActivityMotionLayout?.progress = 0F // Removed: Compose migration
 
         binding.playerMotionLayout.addTransitionListener(object : TransitionAdapter() {
             override fun onTransitionChange(
@@ -675,9 +676,9 @@ class AudioPlayerFragment : Fragment(R.layout.fragment_audio_player), AudioPlaye
             ) {
                 if (NavBarHelper.hasTabs()) {
                     if (endId == R.id.queue_expanded || startId == R.id.queue_expanded) {
-                        mainActivityMotionLayout?.progress = 0F
+                        // mainActivityMotionLayout?.progress = 0F // Removed: Compose migration
                     } else {
-                        mainActivityMotionLayout?.progress = abs(progress)
+                        // mainActivityMotionLayout?.progress = abs(progress) // Removed: Compose migration
                     }
                 }
                 transitionEndId = endId
@@ -688,7 +689,7 @@ class AudioPlayerFragment : Fragment(R.layout.fragment_audio_player), AudioPlaye
                 if (currentId == R.id.end) {
                     viewModel.isMiniPlayerVisible.value = true
                     if (NavBarHelper.hasTabs()) {
-                         mainActivityMotionLayout?.progress = 1F
+                         // mainActivityMotionLayout?.progress = 1F // Removed: Compose migration
                     }
                 } else if (currentId == R.id.start || currentId == R.id.queue_expanded) {
                     viewModel.isMiniPlayerVisible.value = false
@@ -700,7 +701,7 @@ class AudioPlayerFragment : Fragment(R.layout.fragment_audio_player), AudioPlaye
                     }
                     
                     if (NavBarHelper.hasTabs()) {
-                         mainActivityMotionLayout?.progress = 0F
+                         // mainActivityMotionLayout?.progress = 0F // Removed: Compose migration
                     }
                 }
             }
