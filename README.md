@@ -30,7 +30,7 @@ A fully local-only Android client for YouTube, built on modern Android technolog
 
 ## 📦 Installation
 
-Download the latest APK from the [Releases](https://github.com/akashsriramganapathy/lte/releases) page.
+Download the latest APK from the [Releases](https://github.com/Akash-Sriram/lte/releases) page.
 
 ## 🔧 Technical Stack
 
@@ -43,7 +43,7 @@ Download the latest APK from the [Releases](https://github.com/akashsriramganapa
 
 ## 📁 Repository
 
-**GitHub**: [https://github.com/akashsriramganapathy/lte](https://github.com/akashsriramganapathy/lte)
+**GitHub**: [https://github.com/Akash-Sriram/lte](https://github.com/Akash-Sriram/lte)
 
 ## 🙏 Credits
 
