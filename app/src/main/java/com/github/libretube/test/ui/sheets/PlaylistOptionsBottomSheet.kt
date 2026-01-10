@@ -95,10 +95,11 @@ class PlaylistOptionsBottomSheet : BaseBottomSheet() {
                             it.url!!.toID(),
                             playlistId = playlistId
                         )
-                        NavigationHelper.openAudioPlayerFragment(
-                            requireContext(),
-                            minimizeByDefault = true
-                        )
+                        // TODO: Open Compose PlayerScreen
+                        // NavigationHelper.openAudioPlayerFragment(
+                        //     requireContext(),
+                        //     minimizeByDefault = true
+                        // )
                     }
                 }
 

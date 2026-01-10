@@ -19,7 +19,8 @@ class NoInternetActivity : BaseActivity() {
         super.onNewIntent(intent)
 
         if (intent.getBooleanExtra(IntentData.maximizePlayer, false)) {
-            NavigationHelper.openAudioPlayerFragment(this, offlinePlayer = true)
+            // TODO: Open Compose PlayerScreen
+            // NavigationHelper.openAudioPlayerFragment(this, offlinePlayer = true)
         }
     }
 }

@@ -19,9 +19,10 @@ import com.github.libretube.test.parcelable.PlayerData
 import com.github.libretube.test.ui.activities.MainActivity
 import com.github.libretube.test.ui.activities.ZoomableImageActivity
 import com.github.libretube.test.ui.base.BaseActivity
-import com.github.libretube.test.ui.fragments.AudioPlayerFragment
+// import com.github.libretube.test.ui.fragments.AudioPlayerFragment // Removed - replaced by Compose PlayerScreen
 import com.github.libretube.test.ui.fragments.PlayerFragment
-import com.github.libretube.test.ui.views.SingleViewTouchableMotionLayout
+import com.github.libretube.test.ui.extensions.runOnPlayerFragment
+// import com.github.libretube.test.ui.views.SingleViewTouchableMotionLayout
 import com.github.libretube.test.util.PlayingQueue
 
 object NavigationHelper {
@@ -30,6 +31,7 @@ object NavigationHelper {
 
         val activity = ContextHelper.unwrapActivity<MainActivity>(context)
         activity.navController.navigate(NavDirections.openChannel(channelUrlOrId.toID()))
+        /* Legacy code - Player is now in Compose
         try {
             // minimize player if currently expanded
             if (activity.binding.mainMotionLayout.progress == 0f) {
@@ -40,6 +42,7 @@ object NavigationHelper {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+        */
     }
 
     /**
@@ -82,24 +85,12 @@ object NavigationHelper {
                 false
             }
         }
-        if (attachedToRunningPlayer) return
+        if (attachedToRunningPlayer == true) return
 
         val audioOnlyMode = PreferenceHelper.getBoolean(PreferenceKeys.AUDIO_ONLY_MODE, false)
-        val attachedToRunningAudioPlayer = activity.runOnAudioPlayerFragment {
-            PlayingQueue.clearAfterCurrent()
-            this.playNextVideo(videoId.toID())
-
-            if (!audioOnlyPlayerRequested && !audioOnlyMode) {
-                // switch to video only player
-                this.switchToVideoMode(videoId.toID())
-            } else {
-                // maximize player
-                this.binding.playerMotionLayout.transitionToStart()
-            }
-
-            true
-        }
-        if (attachedToRunningAudioPlayer) return
+        // TODO: Implement Compose audio player attachment
+        // val attachedToRunningAudioPlayer = activity.runOnAudioPlayerFragment { ... }
+        // if (attachedToRunningAudioPlayer) return
 
         if (audioOnlyPlayerRequested || (audioOnlyMode && !forceVideo)) {
             // in contrast to the video player, the audio player doesn't start a media service on
@@ -113,7 +104,8 @@ object NavigationHelper {
                 keepQueue
             )
 
-            openAudioPlayerFragment(context, minimizeByDefault = true)
+            // TODO: Open Compose PlayerScreen in audio mode
+            // openAudioPlayerFragment(context, minimizeByDefault = true)
         } else {
             openVideoPlayerFragment(
                 context,
@@ -138,7 +130,9 @@ object NavigationHelper {
 
     /**
      * Start the audio player fragment
+     * TODO: Replace with Compose PlayerScreen
      */
+    /*
     fun openAudioPlayerFragment(
         context: Context,
         offlinePlayer: Boolean = false,
@@ -153,6 +147,7 @@ object NavigationHelper {
             replace<AudioPlayerFragment>(R.id.container, args = args)
         }
     }
+    */
 
     /**
      * Starts the video player fragment for an already existing med

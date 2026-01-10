@@ -3,6 +3,7 @@ package com.github.libretube.test.ui.models
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.common.PlaybackParameters
 import com.github.libretube.test.api.obj.Segment
 import com.github.libretube.test.api.obj.Subtitle
 import com.github.libretube.test.helpers.PlayerHelper
@@ -80,6 +81,33 @@ class PlayerViewModel : ViewModel() {
     private val _uploader = MutableStateFlow("")
     val uploader = _uploader.asStateFlow()
 
+    private val _uploaderAvatar = MutableStateFlow<String?>(null)
+    val uploaderAvatar = _uploaderAvatar.asStateFlow()
+
+    private val _description = MutableStateFlow("")
+    val description = _description.asStateFlow()
+
+    private val _views = MutableStateFlow(0L)
+    val views = _views.asStateFlow()
+
+    private val _likes = MutableStateFlow(0L)
+    val likes = _likes.asStateFlow()
+
+    private val _subscriberCount = MutableStateFlow<Long?>(null)
+    val subscriberCount = _subscriberCount.asStateFlow()
+
+    private val _isBuffering = MutableStateFlow(false)
+    val isBuffering = _isBuffering.asStateFlow()
+
+    private val _currentStream = MutableStateFlow<StreamItem?>(null)
+    val currentStream = _currentStream.asStateFlow()
+
+    private val _playbackPosition = MutableStateFlow(0L)
+    val playbackPosition = _playbackPosition.asStateFlow()
+
+    private val _playbackSpeed = MutableStateFlow(1.0f)
+    val playbackSpeed = _playbackSpeed.asStateFlow()
+
     // Queue (direct from singleton)
     val queue = PlayingQueue.queueState
 
@@ -90,12 +118,54 @@ class PlayerViewModel : ViewModel() {
     fun updatePlaybackState(isPlaying: Boolean, position: Long, duration: Long) {
         _isPlaying.value = isPlaying
         _currentPosition.value = position
+        _playbackPosition.value = position
         _duration.value = duration
     }
 
-    fun updateMetadata(title: String, uploader: String) {
+    fun updateMetadata(
+        title: String,
+        uploader: String,
+        uploaderAvatar: String? = null,
+        description: String = "",
+        views: Long = 0,
+        likes: Long = 0,
+        subscriberCount: Long? = null
+    ) {
         _title.value = title
         _uploader.value = uploader
+        _uploaderAvatar.value = uploaderAvatar
+        _description.value = description
+        _views.value = views
+        _likes.value = likes
+        _subscriberCount.value = subscriberCount
+    }
+
+    fun updateBufferingState(isBuffering: Boolean) {
+        _isBuffering.value = isBuffering
+    }
+
+    fun updateCurrentStream(stream: StreamItem?) {
+        _currentStream.value = stream
+    }
+
+    fun setPlaybackSpeed(speed: Float) {
+        _playbackSpeed.value = speed
+        playerController.value?.let { player ->
+            player.playbackParameters = PlaybackParameters(speed, player.playbackParameters.pitch)
+        }
+        // Persist to preferences
+        com.github.libretube.test.helpers.PreferenceHelper.putString(
+            com.github.libretube.test.constants.PreferenceKeys.PLAYBACK_SPEED,
+            speed.toString()
+        )
+    }
+
+    fun initializePlaybackSpeed() {
+        val savedSpeed = com.github.libretube.test.helpers.PreferenceHelper.getString(
+            com.github.libretube.test.constants.PreferenceKeys.PLAYBACK_SPEED,
+            "1.0"
+        ).toFloatOrNull() ?: 1.0f
+        _playbackSpeed.value = savedSpeed
     }
     
     fun onQueueItemClicked(item: StreamItem) {

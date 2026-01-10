@@ -18,7 +18,8 @@ fun PlayerControls(
     viewModel: PlayerViewModel,
     modifier: Modifier = Modifier,
     onQueueClick: () -> Unit,
-    onChaptersClick: () -> Unit
+    onChaptersClick: () -> Unit,
+    onSettingsClick: () -> Unit
 ) {
     val isPlaying by viewModel.isPlaying.collectAsState()
     val currentPosition by viewModel.currentPosition.collectAsState()
@@ -48,7 +49,7 @@ fun PlayerControls(
             IconButton(onClick = { /* Collapse handled by parent via Draggable */ }) {
                 Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Minimize", tint = Color.White)
             }
-            IconButton(onClick = { /* Settings */ }) {
+            IconButton(onClick = onSettingsClick) {
                 Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.White)
             }
         }
@@ -74,7 +75,7 @@ fun PlayerControls(
                 modifier = Modifier.size(64.dp)
             ) {
                 Icon(
-                    if (isPlaying) Icons.Default.PlayArrow else Icons.Default.PlayArrow,
+                    if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     contentDescription = if (isPlaying) "Pause" else "Play",
                     tint = Color.White,
                     modifier = Modifier.size(48.dp)

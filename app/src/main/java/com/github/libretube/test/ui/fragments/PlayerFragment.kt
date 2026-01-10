@@ -60,6 +60,7 @@ class PlayerFragment : Fragment(), OnlinePlayerOptions {
 
         override fun onPlaybackStateChanged(playbackState: Int) {
             updateVMState()
+            viewModel.updateBufferingState(playbackState == Player.STATE_BUFFERING)
             if (playbackState == Player.STATE_ENDED) {
                 // Handle autoplay or end
             }
@@ -71,7 +72,15 @@ class PlayerFragment : Fragment(), OnlinePlayerOptions {
             }
             maybeStreams?.let { 
                 streams = it
-                viewModel.updateMetadata(it.title ?: "", it.uploader ?: "")
+                viewModel.updateMetadata(
+                    title = it.title ?: "",
+                    uploader = it.uploader ?: "",
+                    uploaderAvatar = it.uploaderAvatar,
+                    description = it.description ?: "",
+                    views = it.views,
+                    likes = it.likes,
+                    subscriberCount = it.uploaderSubscriberCount
+                )
                 viewModel.updateChapters(it.chapters)
             }
         }
@@ -159,8 +168,9 @@ class PlayerFragment : Fragment(), OnlinePlayerOptions {
             viewModel.updatePlaybackState(
                 isPlaying = playerController.isPlaying,
                 position = playerController.currentPosition,
-                duration = playerController.duration.coerceAtLeast(0)
+                duration = playerController.duration.coerceAtMost(Long.MAX_VALUE).coerceAtLeast(0) // Fix potential negative duration from ExoPlayer
             )
+            viewModel.updateBufferingState(playerController.playbackState == Player.STATE_BUFFERING)
         }
     }
     

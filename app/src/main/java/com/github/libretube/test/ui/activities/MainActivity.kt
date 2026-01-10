@@ -55,7 +55,8 @@ import com.github.libretube.test.helpers.ThemeHelper
 import com.github.libretube.test.ui.base.BaseActivity
 import com.github.libretube.test.ui.dialogs.ImportTempPlaylistDialog
 import com.github.libretube.test.ui.extensions.onSystemInsets
-import com.github.libretube.test.ui.fragments.AudioPlayerFragment
+import com.github.libretube.test.ui.extensions.runOnPlayerFragment
+// import com.github.libretube.test.ui.fragments.AudioPlayerFragment // Removed - replaced by Compose PlayerScreen
 import com.github.libretube.test.ui.fragments.PlayerFragment
 import com.github.libretube.test.ui.models.PlayerViewModel
 import com.github.libretube.test.ui.models.SearchViewModel
@@ -492,11 +493,11 @@ class MainActivity : BaseActivity() {
                 return
             }
 
-            // if it's an audio only session, attempt to maximize the audio player or create a new one
-            if (runOnAudioPlayerFragment { binding.playerMotionLayout.transitionToStart(); true }) return
+            // TODO: Implement Compose audio player maximization
+            // if (runOnAudioPlayerFragment { binding.playerMotionLayout.transitionToStart(); true }) return
 
-            val offlinePlayer = intent!!.getBooleanExtra(IntentData.offlinePlayer, false)
-            NavigationHelper.openAudioPlayerFragment(this, offlinePlayer = offlinePlayer)
+            // val offlinePlayer = intent!!.getBooleanExtra(IntentData.offlinePlayer, false)
+            // NavigationHelper.openAudioPlayerFragment(this, offlinePlayer = offlinePlayer)
             return
         }
 
@@ -613,7 +614,7 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
-        if (runOnPlayerFragment { onKeyUp(keyCode) }) {
+        if (runOnPlayerFragment { onKeyUp(keyCode, event) } == true) {
             return true
         }
 
