@@ -66,11 +66,56 @@ fun SubtitleSelectionSheet(
             items = subtitleTracks,
             selectedItem = subtitleTracks.find { it.isSelected },
             onItemSelected = { option ->
-                // TODO: Apply subtitle selection
+                selectTrack(player, option.value, option.trackIndex)
                 onDismiss()
             }
         )
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AudioTrackSelectionSheet(
+    player: MediaController,
+    onDismiss: () -> Unit
+) {
+    val tracks = player.currentTracks
+    val audioTracks = remember(tracks) {
+        getTrackOptions(tracks, C.TRACK_TYPE_AUDIO)
+    }
+
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        SelectionList(
+            title = "Audio Tracks",
+            items = audioTracks,
+            selectedItem = audioTracks.find { it.isSelected },
+            onItemSelected = { option ->
+                selectTrack(player, option.value, option.trackIndex)
+                onDismiss()
+            }
+        )
+    }
+}
+
+private fun selectTrack(player: MediaController, groupOrNull: Any?, trackIndex: Int) {
+    if (groupOrNull == "none") {
+        val newParameters = player.trackSelectionParameters
+            .buildUpon()
+            .clearOverridesOfType(C.TRACK_TYPE_TEXT)
+            .setIgnoredTextSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+            .build()
+        player.trackSelectionParameters = newParameters
+        return
+    }
+
+    val group = groupOrNull as? Tracks.Group ?: return
+    val newParameters = player.trackSelectionParameters
+        .buildUpon()
+        .clearOverridesOfType(group.type)
+        .addOverride(androidx.media3.common.TrackSelectionOverride(group.mediaTrackGroup, trackIndex))
+        .build()
+    
+    player.trackSelectionParameters = newParameters
 }
 
 @Composable
@@ -118,6 +163,7 @@ fun <T> SelectionList(
 data class SelectionOption<T>(
     val label: String,
     val value: T,
+    val trackIndex: Int = 0,
     val isSelected: Boolean = false
 )
 
@@ -128,7 +174,7 @@ private fun getAvailableResolutions(tracks: Tracks): List<SelectionOption<Int>> 
             for (i in 0 until group.length) {
                 val format = group.getTrackFormat(i)
                 if (format.height > 0) {
-                    resolutions.add(SelectionOption("${format.height}p", format.height))
+                    resolutions.add(SelectionOption("${format.height}p", format.height, i))
                 }
             }
         }
@@ -148,8 +194,22 @@ private fun getCurrentVideoHeight(tracks: Tracks): Int {
     return Int.MAX_VALUE
 }
 
-private fun getTrackOptions(tracks: Tracks, trackType: Int): List<SelectionOption<Int>> {
-    val options = mutableListOf<SelectionOption<Int>>()
-    // Simplified: value could be track index or similar
+private fun getTrackOptions(tracks: Tracks, trackType: Int): List<SelectionOption<Any>> {
+    val options = mutableListOf<SelectionOption<Any>>()
+    
+    // Add "None" for subtitles
+    if (trackType == C.TRACK_TYPE_TEXT) {
+        options.add(SelectionOption("Off", "none", isSelected = !tracks.groups.any { it.type == C.TRACK_TYPE_TEXT && it.isSelected }))
+    }
+
+    tracks.groups.forEach { group ->
+        if (group.type == trackType) {
+            for (i in 0 until group.length) {
+                val format = group.getTrackFormat(i)
+                val label = format.language ?: format.label ?: "Track $i"
+                options.add(SelectionOption(label, group, i, group.isTrackSelected(i)))
+            }
+        }
+    }
     return options
 }

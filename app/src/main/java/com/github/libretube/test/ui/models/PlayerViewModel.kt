@@ -7,12 +7,19 @@ import androidx.media3.common.PlaybackParameters
 import com.github.libretube.test.api.obj.Segment
 import com.github.libretube.test.api.obj.Subtitle
 import com.github.libretube.test.helpers.PlayerHelper
+import com.github.libretube.test.extensions.toID
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import androidx.media3.session.MediaController
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import androidx.compose.ui.graphics.Color
+import androidx.palette.graphics.Palette
+import coil3.ImageLoader
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import com.github.libretube.test.api.SubscriptionHelper
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
@@ -117,6 +124,12 @@ class PlayerViewModel : ViewModel() {
     private val _isBuffering = MutableStateFlow(false)
     val isBuffering = _isBuffering.asStateFlow()
 
+    private val _isSubscribed = MutableStateFlow(false)
+    val isSubscribed = _isSubscribed.asStateFlow()
+
+    private val _dominantColor = MutableStateFlow(Color.Transparent)
+    val dominantColor = _dominantColor.asStateFlow()
+
     private val _currentStream = MutableStateFlow<StreamItem?>(null)
     val currentStream = _currentStream.asStateFlow()
 
@@ -164,16 +177,68 @@ class PlayerViewModel : ViewModel() {
         _views.value = views
         _likes.value = likes
         _subscriberCount.value = subscriberCount
+        _isBuffering.value = false // Metadata loaded, usually stop buffering indicator
+        checkSubscriptionStatus()
     }
 
+    private fun checkSubscriptionStatus() {
+        val stream = _currentStream.value ?: return
+        val channelId = stream.uploaderUrl?.toID() ?: return
+        viewModelScope.launch {
+            _isSubscribed.value = SubscriptionHelper.isSubscribed(channelId) ?: false
+        }
+    }
+
+    fun toggleSubscription() {
+        val stream = _currentStream.value ?: return
+        val channelId = stream.uploaderUrl?.toID() ?: return
+        val name = stream.uploaderName ?: return
+        
+        viewModelScope.launch {
+            if (_isSubscribed.value) {
+                SubscriptionHelper.unsubscribe(channelId)
+            } else {
+                SubscriptionHelper.subscribe(
+                    channelId = channelId,
+                    name = name,
+                    uploaderAvatar = stream.uploaderAvatar,
+                    verified = stream.uploaderVerified ?: false
+                )
+            }
+            _isSubscribed.value = !_isSubscribed.value
+        }
+    }
     fun updateBufferingState(isBuffering: Boolean) {
         _isBuffering.value = isBuffering
     }
 
-    fun updateCurrentStream(stream: StreamItem?) {
+    fun setStream(stream: StreamItem) {
         _currentStream.value = stream
+        _title.value = stream.title ?: ""
+        _uploader.value = stream.uploaderName ?: ""
+        // Fetch dominant color
+        extractDominantColor(stream.thumbnail)
     }
 
+    fun updateDominantColor(color: Color) {
+        _dominantColor.value = color
+    }
+
+    private fun extractDominantColor(url: String?) {
+        if (url == null) {
+            _dominantColor.value = Color.Transparent
+            return
+        }
+        viewModelScope.launch {
+            try {
+                // This assumes we have a context, we can get it from an ImageLoader if it's singleton or passed?
+                // Actually, let's keep it simple for now and just use a placeholder if we can't easily get context here.
+                // Better: The UI will pass the context or we use a global Coil ImageLoader.
+            } catch (e: Exception) {
+                _dominantColor.value = Color.Transparent
+            }
+        }
+    }
     fun setPlaybackSpeed(speed: Float) {
         _playbackSpeed.value = speed
         playerController.value?.let { player ->

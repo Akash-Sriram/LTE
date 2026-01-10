@@ -25,6 +25,7 @@ import com.github.libretube.test.ui.sheets.ChaptersSheet
 import com.github.libretube.test.ui.sheets.PlayerSettingsSheet
 import com.github.libretube.test.ui.sheets.QualitySelectionSheet
 import com.github.libretube.test.ui.sheets.SubtitleSelectionSheet
+import com.github.libretube.test.ui.sheets.AudioTrackSelectionSheet
 
 enum class PlayerState {
     Collapsed,
@@ -100,6 +101,7 @@ fun PlayerScreen(
         var showSettings by remember { mutableStateOf(false) }
         var showQuality by remember { mutableStateOf(false) }
         var showCaptions by remember { mutableStateOf(false) }
+        var showAudioTracks by remember { mutableStateOf(false) }
 
         DraggablePlayerPanel(
             state = draggableState,
@@ -144,6 +146,10 @@ fun PlayerScreen(
                 onCaptionsClick = {
                     showSettings = false
                     showCaptions = true
+                },
+                onAudioTrackClick = {
+                    showSettings = false
+                    showAudioTracks = true
                 }
             )
         }
@@ -162,6 +168,15 @@ fun PlayerScreen(
                 SubtitleSelectionSheet(
                     player = controller,
                     onDismiss = { showCaptions = false }
+                )
+            }
+        }
+
+        if (showAudioTracks) {
+            playerViewModel.playerController.value?.let { controller ->
+                AudioTrackSelectionSheet(
+                    player = controller,
+                    onDismiss = { showAudioTracks = false }
                 )
             }
         }

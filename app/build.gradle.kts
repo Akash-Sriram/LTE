@@ -163,6 +163,7 @@ dependencies {
     implementation(libs.androidx.media)
     implementation(libs.androidx.swiperefreshlayout)
     implementation(libs.shimmer)
+    implementation("androidx.palette:palette:1.0.0")
 
     /* Android Lifecycle */
     implementation(libs.lifecycle.viewmodel)

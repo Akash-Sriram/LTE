@@ -31,8 +31,9 @@ fun PlayerMetadataSection(
     val description by viewModel.description.collectAsState()
     val views by viewModel.views.collectAsState()
     val likes by viewModel.likes.collectAsState()
+    val isSubscribed by viewModel.isSubscribed.collectAsState()
 
-    var isDescriptionExpanded by remember { mutableStateOf(false) }
+    var isExpanded by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.padding(16.dp)) {
         // Uploader Row
@@ -64,10 +65,13 @@ fun PlayerMetadataSection(
                 }
             }
             Button(
-                onClick = { viewModel.triggerPlayerCommand(PlayerCommandEvent.Subscribe) },
-                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black)
+                onClick = { viewModel.toggleSubscription() },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isSubscribed) Color.DarkGray else Color.White,
+                    contentColor = if (isSubscribed) Color.White else Color.Black
+                )
             ) {
-                Text("Subscribe")
+                Text(if (isSubscribed) "Subscribed" else "Subscribe")
             }
         }
 
@@ -105,7 +109,7 @@ fun PlayerMetadataSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .animateContentSize()
-                .clickable { isDescriptionExpanded = !isDescriptionExpanded }
+                .clickable { isExpanded = !isExpanded }
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -120,10 +124,10 @@ fun PlayerMetadataSection(
                     text = description,
                     color = Color.White,
                     style = MaterialTheme.typography.bodySmall,
-                    maxLines = if (isDescriptionExpanded) Int.MAX_VALUE else 3,
+                    maxLines = if (isExpanded) Int.MAX_VALUE else 3,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (!isDescriptionExpanded && description.length > 100) {
+                if (!isExpanded && description.length > 100) {
                     Text(
                         text = "Show more",
                         color = Color.LightGray,

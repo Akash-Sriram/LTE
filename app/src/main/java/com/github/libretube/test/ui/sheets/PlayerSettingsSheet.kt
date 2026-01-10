@@ -20,7 +20,8 @@ fun PlayerSettingsSheet(
     viewModel: PlayerViewModel,
     onDismissRequest: () -> Unit,
     onQualityClick: () -> Unit,
-    onCaptionsClick: () -> Unit
+    onCaptionsClick: () -> Unit,
+    onAudioTrackClick: () -> Unit
 ) {
     val playbackSpeed by viewModel.playbackSpeed.collectAsState()
     
@@ -64,7 +65,12 @@ fun PlayerSettingsSheet(
             ListItem(
                 headlineContent = { Text("Captions") },
                 modifier = Modifier.clickable { onCaptionsClick() },
-                trailingContent = { Icon(androidx.compose.material.icons.Icons.Default.KeyboardArrowRight, contentDescription = null) }
+                trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) }
+            )
+            ListItem(
+                headlineContent = { Text("Audio Tracks") },
+                modifier = Modifier.clickable { onAudioTrackClick() },
+                trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) }
             )
         }
     }
