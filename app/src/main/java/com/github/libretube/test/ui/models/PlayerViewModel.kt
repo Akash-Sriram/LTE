@@ -13,6 +13,8 @@ import androidx.media3.session.MediaController
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -20,6 +22,13 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import com.github.libretube.test.util.PlayingQueue
 import com.github.libretube.test.api.obj.ChapterSegment
 import com.github.libretube.test.api.obj.StreamItem
+
+sealed class PlayerCommandEvent {
+    object Share : PlayerCommandEvent()
+    object Download : PlayerCommandEvent()
+    object SaveToPlaylist : PlayerCommandEvent()
+    object Subscribe : PlayerCommandEvent()
+}
 
 @UnstableApi
 class PlayerViewModel : ViewModel() {
@@ -40,6 +49,15 @@ class PlayerViewModel : ViewModel() {
 
     private val _playVideoTrigger = Channel<StreamItem>(Channel.BUFFERED)
     val playVideoTrigger = _playVideoTrigger.receiveAsFlow()
+
+    private val _playerCommandTrigger = kotlinx.coroutines.flow.MutableSharedFlow<PlayerCommandEvent>()
+    val playerCommandTrigger = _playerCommandTrigger.asSharedFlow()
+
+    fun triggerPlayerCommand(command: PlayerCommandEvent) {
+        viewModelScope.launch {
+            _playerCommandTrigger.emit(command)
+        }
+    }
     
     private val _playerController = MutableStateFlow<MediaController?>(null)
     val playerController = _playerController.asStateFlow()
@@ -115,6 +133,14 @@ class PlayerViewModel : ViewModel() {
     private val _chapters = MutableStateFlow<List<ChapterSegment>>(emptyList())
     val chapters = _chapters.asStateFlow()
 
+    // Related Videos
+    private val _relatedVideos = MutableStateFlow<List<StreamItem>>(emptyList())
+    val relatedVideos = _relatedVideos.asStateFlow()
+
+    // Comments (Using a simplified list for now, can expand later)
+    private val _comments = MutableStateFlow<List<com.github.libretube.test.api.obj.Comment>>(emptyList())
+    val comments = _comments.asStateFlow()
+
     fun updatePlaybackState(isPlaying: Boolean, position: Long, duration: Long) {
         _isPlaying.value = isPlaying
         _currentPosition.value = position
@@ -174,6 +200,14 @@ class PlayerViewModel : ViewModel() {
 
     fun updateChapters(newChapters: List<ChapterSegment>) {
         _chapters.value = newChapters
+    }
+
+    fun updateRelatedVideos(videos: List<StreamItem>) {
+        _relatedVideos.value = videos
+    }
+
+    fun updateComments(newComments: List<com.github.libretube.test.api.obj.Comment>) {
+        _comments.value = newComments
     }
 
     var segments = MutableLiveData<List<Segment>>()

@@ -12,7 +12,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.github.libretube.test.api.obj.ChapterSegment
-import com.github.libretube.test.ui.components.formatTime
+import com.github.libretube.test.ui.components.formatDuration
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,7 +58,7 @@ fun ChapterItem(chapter: ChapterSegment, onClick: () -> Unit) {
         }
         
         Text(
-            text = formatTime(chapter.start * 1000), // convert seconds to millis
+            text = formatDuration(chapter.start * 1000), // convert seconds to millis
             style = MaterialTheme.typography.labelMedium,
             modifier = Modifier.width(50.dp)
         )

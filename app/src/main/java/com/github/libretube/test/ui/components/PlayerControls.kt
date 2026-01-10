@@ -108,8 +108,8 @@ fun PlayerControls(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(formatTime(sliderPosition.toLong()), color = Color.White, style = MaterialTheme.typography.bodySmall)
-                Text(formatTime(duration), color = Color.White, style = MaterialTheme.typography.bodySmall)
+                Text(formatDuration(sliderPosition.toLong()), color = Color.White, style = MaterialTheme.typography.bodySmall)
+                Text(formatDuration(duration), color = Color.White, style = MaterialTheme.typography.bodySmall)
             }
             Slider(
                 value = sliderPosition,
@@ -132,9 +132,4 @@ fun PlayerControls(
     }
 }
 
-fun formatTime(millis: Long): String {
-    val totalSeconds = millis / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return String.format("%02d:%02d", minutes, seconds)
-}
+

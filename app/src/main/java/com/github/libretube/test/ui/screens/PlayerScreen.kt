@@ -23,6 +23,8 @@ import com.github.libretube.test.ui.components.DraggablePlayerPanel
 import com.github.libretube.test.ui.sheets.QueueSheet
 import com.github.libretube.test.ui.sheets.ChaptersSheet
 import com.github.libretube.test.ui.sheets.PlayerSettingsSheet
+import com.github.libretube.test.ui.sheets.QualitySelectionSheet
+import com.github.libretube.test.ui.sheets.SubtitleSelectionSheet
 
 enum class PlayerState {
     Collapsed,
@@ -96,6 +98,8 @@ fun PlayerScreen(
         var showQueue by remember { mutableStateOf(false) }
         var showChapters by remember { mutableStateOf(false) }
         var showSettings by remember { mutableStateOf(false) }
+        var showQuality by remember { mutableStateOf(false) }
+        var showCaptions by remember { mutableStateOf(false) }
 
         DraggablePlayerPanel(
             state = draggableState,
@@ -132,8 +136,34 @@ fun PlayerScreen(
         if (showSettings) {
             PlayerSettingsSheet(
                 viewModel = playerViewModel,
-                onDismissRequest = { showSettings = false }
+                onDismissRequest = { showSettings = false },
+                onQualityClick = { 
+                    showSettings = false
+                    showQuality = true
+                },
+                onCaptionsClick = {
+                    showSettings = false
+                    showCaptions = true
+                }
             )
+        }
+
+        if (showQuality) {
+            playerViewModel.playerController.value?.let { controller ->
+                QualitySelectionSheet(
+                    player = controller,
+                    onDismiss = { showQuality = false }
+                )
+            }
+        }
+
+        if (showCaptions) {
+            playerViewModel.playerController.value?.let { controller ->
+                SubtitleSelectionSheet(
+                    player = controller,
+                    onDismiss = { showCaptions = false }
+                )
+            }
         }
     }
 }

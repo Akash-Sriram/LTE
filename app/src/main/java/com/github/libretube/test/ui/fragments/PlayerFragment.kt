@@ -26,6 +26,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import androidx.core.os.bundleOf
+import com.github.libretube.test.enums.ShareObjectType
+import com.github.libretube.test.extensions.toID
+import com.github.libretube.test.helpers.DownloadHelper
+import com.github.libretube.test.obj.ShareData
+import com.github.libretube.test.ui.dialogs.AddToPlaylistDialog
+import com.github.libretube.test.ui.dialogs.ShareDialog
+import com.github.libretube.test.ui.models.PlayerCommandEvent
 
 import android.view.KeyEvent
 import com.github.libretube.test.ui.interfaces.OnlinePlayerOptions
@@ -82,6 +89,7 @@ class PlayerFragment : Fragment(), OnlinePlayerOptions {
                     subscriberCount = it.uploaderSubscriberCount
                 )
                 viewModel.updateChapters(it.chapters)
+                viewModel.updateRelatedVideos(it.relatedStreams)
             }
         }
     }
@@ -130,6 +138,36 @@ class PlayerFragment : Fragment(), OnlinePlayerOptions {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.playVideoTrigger.collect { streamItem ->
                 streamItem.url?.let { playNextVideo(it) }
+            }
+        }
+
+        // Observe Player Commands
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.playerCommandTrigger.collect { command ->
+                val currentStream = viewModel.currentStream.value ?: return@collect
+                val videoId = currentStream.url?.toID() ?: return@collect
+                
+                when (command) {
+                    PlayerCommandEvent.Share -> {
+                        val bundle = bundleOf(
+                            IntentData.id to videoId,
+                            IntentData.shareObjectType to ShareObjectType.VIDEO,
+                            IntentData.shareData to ShareData(currentVideo = currentStream.title)
+                        )
+                        ShareDialog().apply { arguments = bundle }.show(parentFragmentManager, ShareDialog::class.java.name)
+                    }
+                    PlayerCommandEvent.Download -> {
+                        DownloadHelper.startDownloadDialog(requireContext(), parentFragmentManager, videoId)
+                    }
+                    PlayerCommandEvent.SaveToPlaylist -> {
+                        AddToPlaylistDialog().apply {
+                            arguments = bundleOf(IntentData.videoInfo to currentStream)
+                        }.show(parentFragmentManager, AddToPlaylistDialog::class.java.name)
+                    }
+                    PlayerCommandEvent.Subscribe -> {
+                        // TODO: Implement Subscribe logic (usually requires uploaderUrl or similar)
+                    }
+                }
             }
         }
     }

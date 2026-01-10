@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,7 +18,9 @@ import com.github.libretube.test.ui.models.PlayerViewModel
 @Composable
 fun PlayerSettingsSheet(
     viewModel: PlayerViewModel,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
+    onQualityClick: () -> Unit,
+    onCaptionsClick: () -> Unit
 ) {
     val playbackSpeed by viewModel.playbackSpeed.collectAsState()
     
@@ -51,9 +54,18 @@ fun PlayerSettingsSheet(
             }
             
             Spacer(modifier = Modifier.height(16.dp))
-            
-            // TODO: Add Quality selection
-            // TODO: Add Captions selection
+
+            // Extra Settings
+            ListItem(
+                headlineContent = { Text("Quality") },
+                modifier = Modifier.clickable { onQualityClick() },
+                trailingContent = { Icon(androidx.compose.material.icons.Icons.Default.KeyboardArrowRight, contentDescription = null) }
+            )
+            ListItem(
+                headlineContent = { Text("Captions") },
+                modifier = Modifier.clickable { onCaptionsClick() },
+                trailingContent = { Icon(androidx.compose.material.icons.Icons.Default.KeyboardArrowRight, contentDescription = null) }
+            )
         }
     }
 }

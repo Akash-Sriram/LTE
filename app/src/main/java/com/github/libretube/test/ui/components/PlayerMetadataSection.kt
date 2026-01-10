@@ -18,6 +18,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.github.libretube.test.ui.models.PlayerViewModel
+import com.github.libretube.test.ui.models.PlayerCommandEvent
 
 @Composable
 fun PlayerMetadataSection(
@@ -63,7 +64,7 @@ fun PlayerMetadataSection(
                 }
             }
             Button(
-                onClick = { /* TODO: Subscribe */ },
+                onClick = { viewModel.triggerPlayerCommand(PlayerCommandEvent.Subscribe) },
                 colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black)
             ) {
                 Text("Subscribe")
@@ -79,9 +80,21 @@ fun PlayerMetadataSection(
         ) {
             ActionButton(icon = Icons.Default.ThumbUp, label = formatCount(likes))
             ActionButton(icon = Icons.Default.ThumbDown, label = "Dislike")
-            ActionButton(icon = Icons.Default.Share, label = "Share")
-            ActionButton(icon = Icons.Default.Download, label = "Download")
-            ActionButton(icon = Icons.Default.Add, label = "Save")
+            ActionButton(
+                icon = Icons.Default.Share, 
+                label = "Share",
+                onClick = { viewModel.triggerPlayerCommand(PlayerCommandEvent.Share) }
+            )
+            ActionButton(
+                icon = Icons.Default.Download, 
+                label = "Download",
+                onClick = { viewModel.triggerPlayerCommand(PlayerCommandEvent.Download) }
+            )
+            ActionButton(
+                icon = Icons.Default.Add, 
+                label = "Save",
+                onClick = { viewModel.triggerPlayerCommand(PlayerCommandEvent.SaveToPlaylist) }
+            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -123,18 +136,4 @@ fun PlayerMetadataSection(
     }
 }
 
-@Composable
-fun ActionButton(icon: ImageVector, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(icon, contentDescription = label, tint = Color.White)
-        Text(label, color = Color.White, style = MaterialTheme.typography.labelSmall)
-    }
-}
 
-fun formatCount(count: Long): String {
-    return when {
-        count >= 1000000 -> String.format("%.1fM", count / 1000000.0)
-        count >= 1000 -> String.format("%.1fK", count / 1000.0)
-        else -> count.toString()
-    }
-}

@@ -41,6 +41,10 @@ fun FullPlayer(
             
             PlayerMetadataSection(viewModel = viewModel)
             
+            RelatedVideosSection(viewModel = viewModel)
+            
+            CommentsSection(viewModel = viewModel)
+            
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
