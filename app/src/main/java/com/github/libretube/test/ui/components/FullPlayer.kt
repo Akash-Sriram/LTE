@@ -28,7 +28,8 @@ fun FullPlayer(
     alpha: Float,
     onQueueClick: () -> Unit,
     onChaptersClick: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    onVideoOptionsClick: () -> Unit
 ) {
     if (alpha > 0f) {
         val scrollState = rememberScrollState()
@@ -82,7 +83,8 @@ fun FullPlayer(
                 modifier = Modifier.weight(1f),
                 onQueueClick = onQueueClick,
                 onChaptersClick = onChaptersClick,
-                onSettingsClick = onSettingsClick
+                onSettingsClick = onSettingsClick,
+                onVideoOptionsClick = onVideoOptionsClick
             )
             
             PlayerMetadataSection(viewModel = viewModel)

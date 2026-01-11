@@ -9,7 +9,6 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.core.os.bundleOf
-import androidx.fragment.app.FragmentManager
 import com.github.libretube.test.R
 import com.github.libretube.test.api.PlaylistsHelper
 import com.github.libretube.test.constants.IntentData
@@ -25,9 +24,6 @@ import com.github.libretube.test.extensions.toID
 import com.github.libretube.test.extensions.toastFromMainDispatcher
 import com.github.libretube.test.parcelable.DownloadData
 import com.github.libretube.test.services.DownloadService
-import com.github.libretube.test.ui.dialogs.DownloadDialog
-import com.github.libretube.test.ui.dialogs.DownloadPlaylistDialog
-import com.github.libretube.test.ui.dialogs.ShareDialog
 import kotlinx.coroutines.*
 import java.io.File
 import java.nio.file.Path
@@ -111,117 +107,6 @@ object DownloadHelper {
 
     fun DownloadItem.getNotificationId(): Int {
         return Int.MAX_VALUE - id
-    }
-
-    fun startDownloadDialog(context: Context, fragmentManager: FragmentManager, videoId: String) {
-        val externalProviderPackageName =
-            PreferenceHelper.getString(PreferenceKeys.EXTERNAL_DOWNLOAD_PROVIDER, "")
-
-        // Check for 'false' string which might be returned by legacy/boolean preference logic
-        if (externalProviderPackageName.isBlank() || externalProviderPackageName == "false") {
-            DownloadDialog().apply {
-                arguments = bundleOf(IntentData.videoId to videoId)
-            }.show(fragmentManager, DownloadDialog::class.java.name)
-        } else {
-            // "Deep" Integration for YTDLnis (most common external downloader for LTE)
-            val intent = if (externalProviderPackageName.contains("ytdlnis")) {
-                Intent(Intent.ACTION_SEND).apply {
-                    setPackage(externalProviderPackageName)
-                    putExtra(Intent.EXTRA_TEXT, "${ShareDialog.YOUTUBE_FRONTEND_URL}/watch?v=$videoId")
-                    // Pass standardized naming template to facilitate auto-sync
-                    putExtra("template", "%(title)s [%(id)s].%(ext)s")
-                    type = "text/plain"
-                }
-            } else {
-                Intent(Intent.ACTION_VIEW)
-                    .setPackage(externalProviderPackageName)
-                    .setDataAndType(
-                        "${ShareDialog.YOUTUBE_FRONTEND_URL}/watch?v=$videoId".toUri(),
-                        VIDEO_MIMETYPE
-                    )
-            }
-
-            try {
-                context.startActivity(intent)
-            } catch (e: Exception) {
-                // If external app fails/not installed, fallback to internal downloader
-                com.github.libretube.logger.FileLogger.e("DownloadHelper", "Failed to launch external downloader: $externalProviderPackageName. Falling back to internal.", e)
-                DownloadDialog().apply {
-                    arguments = bundleOf(IntentData.videoId to videoId)
-                }.show(fragmentManager, DownloadDialog::class.java.name)
-            }
-        }
-    }
-
-    fun startDownloadPlaylistDialog(
-        context: Context,
-        fragmentManager: FragmentManager,
-        playlistId: String,
-        playlistName: String,
-        playlistType: PlaylistType
-    ) {
-        val externalProviderPackageName =
-            PreferenceHelper.getString(PreferenceKeys.EXTERNAL_DOWNLOAD_PROVIDER, "")
-
-        if (externalProviderPackageName.isBlank()) {
-            val downloadPlaylistDialog = DownloadPlaylistDialog().apply {
-                arguments = bundleOf(
-                    IntentData.playlistId to playlistId,
-                    IntentData.playlistName to playlistName,
-                    IntentData.playlistType to playlistType
-                )
-            }
-            downloadPlaylistDialog.show(fragmentManager, null)
-        } else if (playlistType == PlaylistType.PUBLIC) {
-            val intent = if (externalProviderPackageName.contains("ytdlnis")) {
-                Intent(Intent.ACTION_SEND).apply {
-                    setPackage(externalProviderPackageName)
-                    putExtra(Intent.EXTRA_TEXT, "${ShareDialog.YOUTUBE_FRONTEND_URL}/playlist?list=$playlistId")
-                    putExtra("template", "%(title)s [%(id)s].%(ext)s")
-                    type = "text/plain"
-                }
-            } else {
-                Intent(Intent.ACTION_VIEW)
-                    .setPackage(externalProviderPackageName)
-                    .setDataAndType(
-                        "${ShareDialog.YOUTUBE_FRONTEND_URL}/playlist?list=$playlistId".toUri(),
-                        VIDEO_MIMETYPE
-                    )
-            }
-
-            runCatching { context.startActivity(intent) }
-        } else {
-            // Local Playlist / Bookmarked - Send individual video URLs as a batch to external app
-            CoroutineScope(Dispatchers.IO).launch {
-                val playlistVideoUrls = try {
-                    PlaylistsHelper.getPlaylist(playlistId)
-                } catch (e: Exception) {
-                    context.toastFromMainDispatcher(R.string.unknown_error)
-                    return@launch
-                }.relatedStreams.mapNotNull { it.url }.joinToString("\n")
-
-                val intent = if (externalProviderPackageName.contains("ytdlnis")) {
-                    Intent(Intent.ACTION_SEND).apply {
-                        setPackage(externalProviderPackageName)
-                        putExtra(Intent.EXTRA_TEXT, playlistVideoUrls)
-                        putExtra("template", "%(title)s [%(id)s].%(ext)s")
-                        type = "text/plain"
-                    }
-                } else {
-                    val joinedIds = playlistVideoUrls.split("\n").mapNotNull { it.toID() }.joinToString(",")
-                    Intent(Intent.ACTION_VIEW)
-                        .setPackage(externalProviderPackageName)
-                        .setDataAndType(
-                            "${ShareDialog.YOUTUBE_FRONTEND_URL}/watch_videos?video_ids=${joinedIds}".toUri(),
-                            VIDEO_MIMETYPE
-                        )
-                }
-
-                withContext(Dispatchers.Main) {
-                    runCatching { context.startActivity(intent) }
-                }
-            }
-        }
     }
 
     fun extractDownloadInfoText(context: Context, download: DownloadWithItems): List<String> {
@@ -352,7 +237,7 @@ object DownloadHelper {
                     downloadSize = java.nio.file.Files.size(path)
                 )
                 dao.insertDownloadItem(newItem)
-                Log.d("DownloadHelper", "Linked external file $path to video $videoId")
+                // Linked external file
             }
         }
     }

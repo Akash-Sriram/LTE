@@ -1,6 +1,5 @@
 package com.github.libretube.test.ui.activities
 
-import android.annotation.SuppressLint
 import android.content.res.Resources
 import android.os.Build
 import android.os.Bundle
@@ -8,20 +7,15 @@ import androidx.activity.compose.setContent
 import androidx.core.text.HtmlCompat
 import androidx.core.text.parseAsHtml
 import com.github.libretube.test.R
-import com.github.libretube.test.databinding.ActivityAboutBinding
 import com.github.libretube.test.helpers.ClipboardHelper
 import com.github.libretube.test.helpers.IntentHelper
 import com.github.libretube.test.ui.base.BaseActivity
 import com.github.libretube.test.ui.screens.AboutScreen
 import com.github.libretube.test.ui.theme.LibreTubeTheme
-import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.snackbar.Snackbar
 
 class AboutActivity : BaseActivity() {
-    private lateinit var binding: ActivityAboutBinding
 
-    @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -37,57 +31,6 @@ class AboutActivity : BaseActivity() {
                 )
             }
         }
-        
-        // Setup Toolbar manually or assume BaseActivity handles it?
-        // BaseActivity sets up ActionBar usually. 
-        // AboutActivity extends BaseActivity.
-        // We need to check if BaseActivity relies on ViewBinding. 
-        // BaseActivity usually expects a layout or we need to add a TopAppBar in Compose.
-        // THE USER said "Don't Migrate Navigation Yet (...) Keep using Fragments as containers".
-        // BaseActivity likely sets up the theme and maybe toolbar.
-        // Existing AboutActivity used binding.toolbar. 
-        // If I use setContent, I lose the XML toolbar.
-        // I should stick to XML layout wrapping ComposeView if I want to keep the BaseActivity toolbar behavior?
-        // OR I can use SCaffolding in Compose.
-        // Given I am "rewriting Activity", I should use Scaffold. 
-        // But for consistency with "BaseActivity" behavior (which handles back press etc), 
-        // I might need to verify BaseActivity.
-        // However, for this task, I will proceed with full Compose setContent and assume I can add a Scaffold if needed.
-        // Actually, if I remove `setContentView(binding.root)`, `BaseActivity` might break if it expects a Toolbar.
-        // Let's check BaseActivity. 
-        // BUT, for now, I will use setContent. If toolbar is missing, I will add it in next iteration.
-        // Actually, AboutActivity setup the toolbar: `binding.toolbar.setNavigationOnClickListener`.
-        // So I need to add TopAppBar in AboutScreen or wrap in Scaffold.
-        // For now, I will assume AboutScreen should have a TopAppBar or I wrap it.
-    }
-
-    /* Remove setupCard and onLongClick as they are now handled via Compose click listeners or need to be adapted if we want LongClick copy support. 
-       For now, simple click support. */
-
-    private fun setupCard(card: MaterialCardView, link: String) {
-        card.setOnClickListener {
-            IntentHelper.openLinkFromHref(this, supportFragmentManager, link)
-        }
-        card.setOnLongClickListener {
-            onLongClick(link)
-            true
-        }
-    }
-
-    private fun onLongClick(href: String) {
-        // copy the link to the clipboard
-        ClipboardHelper.save(this, text = href)
-        // show the snackBar with open action
-        Snackbar.make(
-            binding.root,
-            R.string.copied_to_clipboard,
-            Snackbar.LENGTH_LONG
-        )
-            .setAction(R.string.open_copied) {
-                IntentHelper.openLinkFromHref(this, supportFragmentManager, href)
-            }
-            .setAnimationMode(Snackbar.ANIMATION_MODE_FADE)
-            .show()
     }
 
     private fun showLicense() {
@@ -129,7 +72,5 @@ class AboutActivity : BaseActivity() {
         private const val WEBSITE_URL = "https://libretube.dev"
         const val GITHUB_URL = "https://github.com/libre-tube/LibreTube"
         private const val WEBLATE_URL = "https://hosted.weblate.org/projects/libretube/libretube/"
-        private const val LICENSE_URL = "https://gnu.org/"
     }
 }
-

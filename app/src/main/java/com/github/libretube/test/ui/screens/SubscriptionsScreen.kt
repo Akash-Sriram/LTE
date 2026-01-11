@@ -23,6 +23,22 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
+import com.github.libretube.test.extensions.toID
+import com.github.libretube.test.extensions.formatShort
+import com.github.libretube.test.ui.sheets.FilterSortBottomSheetCompose
+import com.github.libretube.test.helpers.PreferenceHelper
+import com.github.libretube.test.constants.PreferenceKeys
+import com.github.libretube.test.api.obj.StreamItem
+import com.github.libretube.test.ui.sheets.VideoOptionsSheet
+import com.github.libretube.test.ui.sheets.DownloadBottomSheet
+import com.github.libretube.test.ui.sheets.ShareBottomSheet
+import com.github.libretube.test.enums.ShareObjectType
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 data class SubscriptionsScreenState(
     val videos: List<SubscriptionItemState>? = null,
@@ -35,15 +51,262 @@ data class SubscriptionsScreenState(
 )
 
 sealed class SubscriptionItemState {
-    data class Video(val state: VideoCardState) : SubscriptionItemState()
+    data class Video(val state: VideoCardState, val streamItem: StreamItem) : SubscriptionItemState()
     object AllCaughtUp : SubscriptionItemState()
 }
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun SubscriptionsScreen(
+    navController: androidx.navigation.NavController,
+    viewModel: com.github.libretube.test.ui.models.SubscriptionsViewModel,
+    channelGroupsModel: com.github.libretube.test.ui.models.EditChannelGroupsModel = androidx.lifecycle.viewmodel.compose.viewModel() // Helper default if simple
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+
+    val videoFeed by viewModel.videoFeed.observeAsState()
+    val feedProgress by viewModel.feedProgress.observeAsState()
+    val channelGroups by channelGroupsModel.groups.observeAsState(emptyList())
+
+    // Preferences State
+    var selectedFilterGroup by remember { 
+        mutableIntStateOf(com.github.libretube.test.helpers.PreferenceHelper.getInt(com.github.libretube.test.constants.PreferenceKeys.SELECTED_CHANNEL_GROUP, 0))
+    }
+    var selectedSortOrder by remember { 
+        mutableIntStateOf(com.github.libretube.test.helpers.PreferenceHelper.getInt(com.github.libretube.test.constants.PreferenceKeys.FEED_SORT_ORDER, 0))
+    }
+    var hideWatched by remember { 
+        mutableStateOf(com.github.libretube.test.helpers.PreferenceHelper.getBoolean(com.github.libretube.test.constants.PreferenceKeys.HIDE_WATCHED_FROM_FEED, false))
+    }
+    var showUpcoming by remember { 
+        mutableStateOf(com.github.libretube.test.helpers.PreferenceHelper.getBoolean(com.github.libretube.test.constants.PreferenceKeys.SHOW_UPCOMING_IN_FEED, true))
+    }
+    var showFilterSort by remember { mutableStateOf(false) }
+    var showChannelGroups by remember { mutableStateOf(false) }
+    var groupToEdit by remember { mutableStateOf<com.github.libretube.test.db.obj.SubscriptionGroup?>(null) }
+    var showEditGroup by remember { mutableStateOf(false) }
+
+    var showVideoOptions by remember { mutableStateOf(false) }
+    var selectedVideo by remember { mutableStateOf<StreamItem?>(null) }
+    var showDownloadSheet by remember { mutableStateOf(false) }
+    var showShareSheet by remember { mutableStateOf(false) }
+
+    var processedFeed by remember { mutableStateOf<List<SubscriptionItemState>?>(null) }
+    
+    // Derived state for group names
+    val groupNames = remember(channelGroups) {
+        listOf(context.getString(R.string.all)) + channelGroups.map { it.name }
+    }
+    
+    // Process Feed Effect
+    LaunchedEffect(videoFeed, selectedFilterGroup, selectedSortOrder, hideWatched, showUpcoming, channelGroups) {
+        if (videoFeed != null) {
+            // Helper logic ported from Fragment
+            val feed = videoFeed!!
+                .filterByGroup(selectedFilterGroup, channelGroups)
+                .let {
+                    com.github.libretube.test.db.DatabaseHelper.filterByStreamTypeAndWatchPosition(it, hideWatched, showUpcoming)
+                }
+            
+            val sortedFeed = feed.sortedBySelectedOrder(selectedSortOrder)
+            
+            val result = sortedFeed.map { SubscriptionItemState.Video(it.toVideoCardState(), it) }.toMutableList<SubscriptionItemState>()
+
+            if (selectedSortOrder == 0) {
+                 val lastCheckedFeedTime = com.github.libretube.test.helpers.PreferenceHelper.getLastCheckedFeedTime(seenByUser = true)
+                 val caughtUpIndex = feed.indexOfFirst { it.uploaded <= lastCheckedFeedTime && !it.isUpcoming }
+                 if (caughtUpIndex > 0 && !feed[caughtUpIndex - 1].isUpcoming) {
+                     result.add(caughtUpIndex, SubscriptionItemState.AllCaughtUp)
+                 }
+            }
+            processedFeed = result
+        } else {
+            processedFeed = null
+        }
+    }
+
+    // Effect to fetch feed if empty
+    LaunchedEffect(Unit) {
+        if (viewModel.videoFeed.value == null) {
+             viewModel.fetchFeed(context, forceRefresh = false)
+        }
+        if (viewModel.subscriptions.value == null) {
+             viewModel.fetchSubscriptions(context)
+        }
+        // Fetch groups
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+             val groups = com.github.libretube.test.db.DatabaseHolder.Database.subscriptionGroupsDao().getAll()
+                 .sortedBy { it.index }
+             channelGroupsModel.groups.postValue(groups)
+        }
+    }
+
+    SubscriptionsContent(
+        state = SubscriptionsScreenState(
+            videos = processedFeed,
+            channelGroups = groupNames,
+            selectedGroupIndex = selectedFilterGroup,
+            isLoading = videoFeed == null,
+            feedProgress = feedProgress,
+            isEmpty = videoFeed?.isEmpty() == true
+        ),
+        onVideoClick = { videoId ->
+             com.github.libretube.test.helpers.NavigationHelper.navigateVideo(context, videoId)
+        },
+        onVideoLongClick = { streamItem ->
+            selectedVideo = streamItem
+            showVideoOptions = true
+        },
+        onRefresh = {
+             viewModel.fetchSubscriptions(context)
+             viewModel.fetchFeed(context, forceRefresh = true)
+        },
+        onSortFilterClick = { 
+            showFilterSort = true
+        },
+        onToggleSubsClick = { /* TODO */ },
+        onEditGroupsClick = { 
+            showChannelGroups = true
+        },
+        onGroupClick = { index ->
+             selectedFilterGroup = index
+             com.github.libretube.test.helpers.PreferenceHelper.putInt(com.github.libretube.test.constants.PreferenceKeys.SELECTED_CHANNEL_GROUP, index)
+        },
+        onGroupLongClick = { index ->
+             // Play by group logic
+             // Simplified for now
+        }
+    )
+
+    if (showFilterSort) {
+        FilterSortBottomSheetCompose(
+            selectedSortOrder = selectedSortOrder,
+            onSortOrderChange = {
+                selectedSortOrder = it
+                PreferenceHelper.putInt(PreferenceKeys.FEED_SORT_ORDER, it)
+            },
+            hideWatched = hideWatched,
+            onHideWatchedChange = {
+                hideWatched = it
+                PreferenceHelper.putBoolean(PreferenceKeys.HIDE_WATCHED_FROM_FEED, it)
+            },
+            showUpcoming = showUpcoming,
+            onShowUpcomingChange = {
+                showUpcoming = it
+                PreferenceHelper.putBoolean(PreferenceKeys.SHOW_UPCOMING_IN_FEED, it)
+            },
+            onDismissRequest = { showFilterSort = false }
+        )
+    }
+
+    if (showChannelGroups) {
+        com.github.libretube.test.ui.sheets.ChannelGroupsSheet(
+            onDismissRequest = { 
+                showChannelGroups = false
+                // Refresh groups in model
+                CoroutineScope(Dispatchers.IO).launch {
+                    val groups = com.github.libretube.test.db.DatabaseHolder.Database.subscriptionGroupsDao().getAll()
+                        .sortedBy { it.index }
+                    channelGroupsModel.groups.postValue(groups)
+                }
+            },
+            onEditGroup = { group ->
+                groupToEdit = group
+                showEditGroup = true
+            }
+        )
+    }
+
+    if (showEditGroup) {
+        com.github.libretube.test.ui.sheets.EditChannelGroupSheet(
+            groupToEdit = groupToEdit,
+            onDismissRequest = { 
+                showEditGroup = false
+                // Refresh groups
+                CoroutineScope(Dispatchers.IO).launch {
+                    val groups = com.github.libretube.test.db.DatabaseHolder.Database.subscriptionGroupsDao().getAll()
+                        .sortedBy { it.index }
+                    channelGroupsModel.groups.postValue(groups)
+                }
+            }
+        )
+    }
+
+    if (showVideoOptions && selectedVideo != null) {
+        VideoOptionsSheet(
+            streamItem = selectedVideo!!,
+            onDismissRequest = { showVideoOptions = false },
+            onShareClick = {
+                showShareSheet = true
+            },
+            onDownloadClick = {
+                showDownloadSheet = true
+            },
+            onMarkWatchedStatusChange = {
+                // Refresh feed to hide watched if needed
+                viewModel.fetchFeed(context, forceRefresh = false)
+            }
+        )
+    }
+
+    if (showDownloadSheet && selectedVideo != null) {
+        DownloadBottomSheet(
+            videoId = selectedVideo!!.url?.toID() ?: "",
+            onDismissRequest = { showDownloadSheet = false }
+        )
+    }
+
+    if (showShareSheet && selectedVideo != null) {
+        ShareBottomSheet(
+            id = selectedVideo!!.url?.toID() ?: "",
+            title = selectedVideo!!.title ?: "",
+            shareObjectType = ShareObjectType.VIDEO,
+            initialTimestamp = "0",
+            onDismissRequest = { showShareSheet = false }
+        )
+    }
+}
+
+// Helpers
+private fun List<com.github.libretube.test.api.obj.StreamItem>.filterByGroup(
+    groupIndex: Int, 
+    groups: List<com.github.libretube.test.db.obj.SubscriptionGroup>
+): List<com.github.libretube.test.api.obj.StreamItem> {
+    if (groupIndex == 0) return this
+    val group = groups.getOrNull(groupIndex - 1)
+    return filter {
+        val channelId = it.uploaderUrl.orEmpty().toID()
+        group?.channels?.contains(channelId) != false
+    }
+}
+
+private fun List<com.github.libretube.test.api.obj.StreamItem>.sortedBySelectedOrder(sortOrder: Int) = when (sortOrder) {
+    0 -> this
+    1 -> this.reversed()
+    2 -> this.sortedBy { it.views }.reversed()
+    3 -> this.sortedBy { it.views }
+    4 -> this.sortedBy { it.uploaderName }
+    5 -> this.sortedBy { it.uploaderName }.reversed()
+    else -> this
+}
+
+private fun com.github.libretube.test.api.obj.StreamItem.toVideoCardState() = VideoCardState(
+    videoId = url?.toID() ?: "",
+    title = title ?: "",
+    uploaderName = uploaderName ?: "",
+    views = views?.formatShort() ?: "",
+    duration = duration?.let { android.text.format.DateUtils.formatElapsedTime(it) } ?: "",
+    thumbnailUrl = thumbnail,
+    uploaderAvatarUrl = uploaderAvatar
+)
+
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+fun SubscriptionsContent(
     state: SubscriptionsScreenState,
     onVideoClick: (String) -> Unit,
+    onVideoLongClick: (StreamItem) -> Unit,
     onRefresh: () -> Unit,
     onSortFilterClick: () -> Unit,
     onToggleSubsClick: () -> Unit,
@@ -134,8 +397,8 @@ fun SubscriptionsScreen(
                     Text(stringResource(R.string.emptyList))
                 }
             } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 160.dp),
+                androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                    columns = androidx.compose.foundation.lazy.grid.GridCells.Adaptive(minSize = 160.dp),
                     contentPadding = PaddingValues(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -146,7 +409,11 @@ fun SubscriptionsScreen(
                             is SubscriptionItemState.Video -> {
                                 VideoCard(
                                     state = item.state,
-                                    onClick = { onVideoClick(item.state.videoId) }
+                                    onClick = { onVideoClick(item.state.videoId) },
+                                    modifier = Modifier.combinedClickable(
+                                        onClick = { onVideoClick(item.state.videoId) },
+                                        onLongClick = { onVideoLongClick(item.streamItem) }
+                                    )
                                 )
                             }
                             is SubscriptionItemState.AllCaughtUp -> {

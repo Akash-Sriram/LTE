@@ -33,7 +33,7 @@ class SubscriptionsViewModel : ViewModel() {
                 }
             } catch (e: Exception) {
                 context.toastFromMainDispatcher(R.string.server_error)
-                Log.e(TAG(), e.toString())
+                // Error in SubscriptionsViewModel
                 return@launch
             }
             this@SubscriptionsViewModel.videoFeed.postValue(videoFeed)
@@ -49,7 +49,7 @@ class SubscriptionsViewModel : ViewModel() {
                 SubscriptionHelper.getSubscriptions()
             } catch (e: Exception) {
                 context.toastFromMainDispatcher(R.string.server_error)
-                Log.e(TAG(), e.toString())
+                // Error in SubscriptionsViewModel
                 return@launch
             }
             this@SubscriptionsViewModel.subscriptions.postValue(subscriptions)

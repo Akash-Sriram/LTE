@@ -27,8 +27,7 @@ import com.github.libretube.test.extensions.updateParameters
 import com.github.libretube.test.helpers.PlayerHelper
 import com.github.libretube.test.ui.activities.MainActivity
 import com.github.libretube.test.ui.activities.NoInternetActivity
-import com.github.libretube.test.ui.activities.OfflinePlayerActivity
-import com.github.libretube.test.ui.fragments.DownloadTab
+import com.github.libretube.test.enums.DownloadTab
 import com.github.libretube.test.util.PlayingQueue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -97,11 +96,7 @@ open class OfflinePlayerService : AbstractPlayerService() {
     }
 
     override fun getIntentActivity(): Class<*> {
-        return when {
-            !noInternetService && isAudioOnlyPlayer -> MainActivity::class.java
-            noInternetService && isAudioOnlyPlayer -> NoInternetActivity::class.java
-            else -> OfflinePlayerActivity::class.java
-        }
+        return MainActivity::class.java
     }
 
     /**

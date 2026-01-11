@@ -27,6 +27,13 @@ import com.github.libretube.test.api.obj.Playlists
 import com.github.libretube.test.db.obj.PlaylistBookmark
 import com.github.libretube.test.enums.PlaylistType
 import com.github.libretube.test.ui.models.LibraryViewModel
+import com.github.libretube.test.ui.sheets.PlaylistOptionsSheet
+import com.github.libretube.test.extensions.toID
+import com.github.libretube.test.ui.sheets.DownloadPlaylistBottomSheet
+
+enum class LibraryListingType {
+    PLAYLISTS, BOOKMARKS
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,6 +51,12 @@ fun LibraryListingScreen(
     val isReorderMode by viewModel.isReorderMode.collectAsState()
     val reorderPlaylists by viewModel.reorderPlaylists.collectAsState()
     val reorderBookmarks by viewModel.reorderBookmarks.collectAsState()
+    
+    var showPlaylistOptions by remember { mutableStateOf(false) }
+    var selectedPlaylistId by remember { mutableStateOf("") }
+    var selectedPlaylistName by remember { mutableStateOf("") }
+    var selectedPlaylistType by remember { mutableStateOf(PlaylistType.PUBLIC) }
+    var showDownloadPlaylist by remember { mutableStateOf(false) }
 
     val currentItems = if (isReorderMode) {
         if (isPlaylists) reorderPlaylists else reorderBookmarks
@@ -108,7 +121,12 @@ fun LibraryListingScreen(
                         thumbnail = thumbnail,
                         isReorderMode = isReorderMode,
                         onClick = { if (!isReorderMode) onItemClick(id, type) },
-                        onOptionsClick = { onOptionsClick(id, title ?: "", type) },
+                        onOptionsClick = { 
+                            selectedPlaylistId = id
+                            selectedPlaylistName = title ?: ""
+                            selectedPlaylistType = type
+                            showPlaylistOptions = true
+                        },
                         onMoveUp = {
                             if (isPlaylists) viewModel.onItemMovePlaylists(index, index - 1)
                             else viewModel.onItemMoveBookmarks(index, index - 1)
@@ -123,6 +141,38 @@ fun LibraryListingScreen(
                 }
             }
         }
+    }
+
+    if (showPlaylistOptions) {
+        PlaylistOptionsSheet(
+            playlistId = selectedPlaylistId,
+            playlistName = selectedPlaylistName,
+            playlistType = selectedPlaylistType,
+            onDismissRequest = { showPlaylistOptions = false },
+            onShareClick = { /* TODO */ },
+            onDownloadClick = {
+                showDownloadPlaylist = true
+            },
+            onEditDescriptionClick = { /* TODO */ },
+            onSortClick = { /* TODO */ },
+            onReorderClick = {
+                showPlaylistOptions = false
+                viewModel.toggleReorderMode()
+            },
+            onExportClick = { /* TODO */ },
+            onBookmarkChange = {
+                viewModel.refreshData()
+            }
+        )
+    }
+
+    if (showDownloadPlaylist) {
+        DownloadPlaylistBottomSheet(
+            playlistId = selectedPlaylistId,
+            playlistName = selectedPlaylistName,
+            playlistType = selectedPlaylistType,
+            onDismissRequest = { showDownloadPlaylist = false }
+        )
     }
 }
 

@@ -27,6 +27,9 @@ import coil3.compose.AsyncImage
 import com.github.libretube.test.R
 import com.github.libretube.test.ui.theme.LibreTubeTheme
 
+import androidx.compose.runtime.Immutable
+
+@Immutable
 data class ChannelCardState(
     val channelId: String,
     val name: String,
@@ -51,7 +54,7 @@ fun ChannelCard(
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
-            model = state.avatarUrl,
+            model = com.github.libretube.test.util.rememberContentWithCrossfade(state.avatarUrl),
             contentDescription = null,
             modifier = Modifier
                 .size(70.dp)

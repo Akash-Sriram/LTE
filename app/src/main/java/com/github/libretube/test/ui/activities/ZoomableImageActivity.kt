@@ -1,39 +1,49 @@
 package com.github.libretube.test.ui.activities
 
-import android.annotation.SuppressLint
 import android.os.Bundle
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.isGone
-import androidx.core.view.isVisible
-import androidx.lifecycle.lifecycleScope
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import coil3.compose.AsyncImage
 import com.github.libretube.test.constants.IntentData
-import com.github.libretube.test.databinding.ActivityZoomableImageBinding
-import com.github.libretube.test.helpers.ImageHelper
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.github.libretube.test.ui.theme.LibreTubeTheme
 
-/**
- * An activity that allows you to zoom and rotate an image
- */
 class ZoomableImageActivity : AppCompatActivity() {
-    @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val binding = ActivityZoomableImageBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        val bitmapUrl = intent.getStringExtra(IntentData.bitmapUrl)!!
 
-        lifecycleScope.launch(Dispatchers.IO) {
-            val bitmapUrl = intent.getStringExtra(IntentData.bitmapUrl)!!
-            val bitmap = ImageHelper.getImage(this@ZoomableImageActivity, bitmapUrl) ?: return@launch
-
-            withContext(Dispatchers.Main) {
-                binding.imageView.setImageBitmap(bitmap)
-                binding.progress.isGone = true
-                binding.imageView.isVisible = true
+        setContent {
+            LibreTubeTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        var isLoading by remember { mutableStateOf(true) }
+                        
+                        AsyncImage(
+                            model = bitmapUrl,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            onSuccess = { isLoading = false },
+                            onLoading = { isLoading = true }
+                        )
+                        
+                        if (isLoading) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                }
             }
         }
     }
 }
-

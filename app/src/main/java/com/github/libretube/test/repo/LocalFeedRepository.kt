@@ -13,7 +13,7 @@ import com.github.libretube.test.extensions.parallelMap
 import com.github.libretube.test.extensions.toID
 import com.github.libretube.test.helpers.NewPipeExtractorInstance
 import com.github.libretube.test.helpers.PreferenceHelper
-import com.github.libretube.test.ui.dialogs.ShareDialog.Companion.YOUTUBE_FRONTEND_URL
+import com.github.libretube.test.constants.IntentData.YOUTUBE_FRONTEND_URL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -102,7 +102,7 @@ class LocalFeedRepository : FeedRepository {
                             channelExtractionCount.incrementAndGet()
                     }
                 } catch (e: Exception) {
-                    Log.e(channelId, e.stackTraceToString())
+                    // LocalFeedRepository Error
                     null
                 } finally {
                     withContext(Dispatchers.Main) {

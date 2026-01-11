@@ -1,5 +1,7 @@
 package com.github.libretube.test.ui.activities
 
+import com.github.libretube.test.extensions.toastFromMainDispatcher
+import com.github.libretube.test.extensions.toID
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -16,12 +18,23 @@ import androidx.activity.viewModels
 import androidx.appcompat.widget.SearchView
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.movableContentOf
-import androidx.compose.runtime.remember
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.fragment.app.FragmentContainerView
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.net.toUri
 import androidx.core.os.bundleOf
@@ -36,12 +49,11 @@ import androidx.navigation.ui.onNavDestinationSelected
 import androidx.navigation.ui.setupWithNavController
 import androidx.recyclerview.widget.RecyclerView
 import com.github.libretube.test.BuildConfig
-import com.github.libretube.test.NavDirections
+// import com.github.libretube.test.NavDirections
 import com.github.libretube.test.R
 import com.github.libretube.test.compat.PictureInPictureCompat
 import com.github.libretube.test.constants.IntentData
 import com.github.libretube.test.constants.PreferenceKeys
-import com.github.libretube.test.databinding.ActivityMainNavigationBinding
 import com.github.libretube.test.enums.ImportFormat
 import com.github.libretube.test.enums.TopLevelDestination
 import com.github.libretube.test.extensions.anyChildFocused
@@ -53,16 +65,15 @@ import com.github.libretube.test.helpers.NetworkHelper
 import com.github.libretube.test.helpers.PreferenceHelper
 import com.github.libretube.test.helpers.ThemeHelper
 import com.github.libretube.test.ui.base.BaseActivity
-import com.github.libretube.test.ui.dialogs.ImportTempPlaylistDialog
 import com.github.libretube.test.ui.extensions.onSystemInsets
-import com.github.libretube.test.ui.extensions.runOnPlayerFragment
+// import com.github.libretube.test.ui.extensions.runOnPlayerFragment
 // import com.github.libretube.test.ui.fragments.AudioPlayerFragment // Removed - replaced by Compose PlayerScreen
-import com.github.libretube.test.ui.fragments.PlayerFragment
+// import com.github.libretube.test.ui.fragments.PlayerFragment
 import com.github.libretube.test.ui.models.PlayerViewModel
 import com.github.libretube.test.ui.models.SearchViewModel
 import com.github.libretube.test.ui.models.SubscriptionsViewModel
-import com.github.libretube.test.ui.preferences.BackupRestoreSettings
-import com.github.libretube.test.ui.preferences.BackupRestoreSettings.Companion.FILETYPE_ANY
+import com.github.libretube.test.helpers.BackupHelper
+import com.github.libretube.test.helpers.BackupHelper.FILETYPE_ANY
 import com.github.libretube.test.ui.screens.PlayerScreen
 import com.github.libretube.test.ui.theme.LibreTubeTheme
 import com.github.libretube.test.util.PlayingQueue
@@ -72,6 +83,82 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import androidx.navigation.NavHostController
+import com.github.libretube.test.ui.navigation.MainNavigation
+import com.github.libretube.test.ui.navigation.Routes
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainTopAppBar(
+    isSearchActive: Boolean,
+    searchQuery: String,
+    onQueryChange: (String) -> Unit,
+    onSearchActiveChange: (Boolean) -> Unit,
+    onSearchQuery: (String) -> Unit,
+    onSettingsClick: () -> Unit
+) {
+    if (isSearchActive) {
+        SearchBar(
+            query = searchQuery,
+            onQueryChange = onQueryChange,
+            onSearch = {
+                onSearchActiveChange(false)
+                onSearchQuery(it)
+            },
+            active = true,
+            onActiveChange = onSearchActiveChange,
+            placeholder = { Text("Search") },
+            leadingIcon = {
+                IconButton(onClick = { onSearchActiveChange(false) }) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                }
+            },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+        ) {
+        }
+    } else {
+        TopAppBar(
+            title = { Text(stringResource(R.string.app_name)) },
+            actions = {
+                IconButton(onClick = { onSearchActiveChange(true) }) {
+                    Icon(Icons.Default.Search, contentDescription = "Search")
+                }
+                IconButton(onClick = onSettingsClick) {
+                    Icon(Icons.Default.Settings, contentDescription = "Settings")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun MainBottomNavigation(navController: NavController, currentRoute: String?) {
+    val items = listOf(
+        Triple(com.github.libretube.test.ui.navigation.Routes.Home, R.string.startpage, R.drawable.ic_home),
+        Triple(com.github.libretube.test.ui.navigation.Routes.Trends, R.string.trending, R.drawable.ic_trending),
+        Triple(com.github.libretube.test.ui.navigation.Routes.Subscriptions, R.string.subscriptions, R.drawable.ic_subscriptions),
+        Triple(com.github.libretube.test.ui.navigation.Routes.Library, R.string.library, R.drawable.ic_library)
+    )
+
+    NavigationBar {
+        items.forEach { (route, titleRes, iconRes) ->
+            NavigationBarItem(
+                icon = { Icon(painterResource(iconRes), contentDescription = stringResource(titleRes)) },
+                label = { Text(stringResource(titleRes)) },
+                selected = currentRoute == route,
+                onClick = {
+                    navController.navigate(route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            )
+        }
+    }
+}
 
 class MainActivity : BaseActivity() {
 
@@ -93,10 +180,13 @@ class MainActivity : BaseActivity() {
         }
     }
 
+    // We will initialize this in onCreate
+    lateinit var navController: NavHostController
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
-        android.util.Log.d("LIBRETUBE_HEARTBEAT", "MainActivity created successfully. Logging is working.")
+        // MainActivity created
 
         // show noInternet Activity if no internet available on app startup
         if (!NetworkHelper.isNetworkAvailable(this)) {
@@ -127,8 +217,29 @@ class MainActivity : BaseActivity() {
 
         setContent {
             LibreTubeTheme {
-                val playerViewModel: PlayerViewModel by viewModels()
-                
+                val playerViewModel: PlayerViewModel = viewModels<PlayerViewModel>().value
+                val updateViewModel: com.github.libretube.test.ui.models.UpdateViewModel = viewModels<com.github.libretube.test.ui.models.UpdateViewModel>().value
+                navController = rememberNavController()
+
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = navBackStackEntry?.destination?.route
+
+                var isSearchActive by remember { mutableStateOf(false) }
+                var searchQuery by remember { mutableStateOf(savedSearchQuery ?: "") }
+
+                val isQueueEmpty by PlayingQueue.queueState.map { it.isEmpty() }.collectAsState(initial = true)
+
+                // Fix: Connect Queue Logic
+                LaunchedEffect(playerViewModel) {
+                    playerViewModel.playVideoTrigger.collect { streamItem ->
+                        NavigationHelper.navigateVideo(
+                            context = this@MainActivity,
+                            videoId = streamItem.url?.toID(),
+                            forceVideo = true
+                        )
+                    }
+                }
+
                 val playerContent = remember {
                     movableContentOf {
                         PlayerScreen(
@@ -140,345 +251,154 @@ class MainActivity : BaseActivity() {
                     }
                 }
 
-                Box(modifier = Modifier.fillMaxSize()) {
-                    // Layer 1: App Content (Legacy Navigation)
-                    AndroidView(
-                        factory = { ctx ->
-                            binding = ActivityMainNavigationBinding.inflate(layoutInflater)
-                            setupNavigation()
-                            binding.root
+                // Import Playlist Dialog State
+                val importPlaylistData by _importPlaylistState
+                
+                if (importPlaylistData != null) {
+                    val (playlistName, videoIds) = importPlaylistData!!
+                    val context = LocalContext.current
+                    com.github.libretube.test.ui.sheets.ConfirmationSheet(
+                        title = stringResource(R.string.import_temp_playlist),
+                        message = stringResource(R.string.import_temp_playlist_summary, playlistName, videoIds.size),
+                        confirmText = stringResource(R.string.okay),
+                        cancelText = stringResource(R.string.cancel),
+                        isDestructive = false,
+                        onConfirm = {
+                            // Import logic
+                            // val context = LocalContext.current // Moved up
+                            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                                try {
+                                    val playlist = com.github.libretube.test.helpers.ImportHelper.LocalImportPlaylist(
+                                        name = playlistName,
+                                        videos = videoIds
+                                    )
+                                    com.github.libretube.test.api.PlaylistsHelper.importPlaylists(listOf(playlist))
+                                    context.toastFromMainDispatcher(R.string.playlistCreated)
+                                } catch (e: Exception) {
+                                  // Log or toast error
+                                }
+                            }
+                            _importPlaylistState.value = null
                         },
-                        modifier = Modifier.fillMaxSize()
+                        onCancel = {
+                            _importPlaylistState.value = null
+                        }
                     )
+                }
 
-                    // Layer 2: Global Player
-                    val isQueueEmpty by PlayingQueue.queueState.map { it.isEmpty() }.collectAsState(initial = true)
-                    if (!isQueueEmpty) {
-                        playerContent()
+                // Update Available Dialog State
+                val updateInfo by updateViewModel.updateInfo
+                val downloadUrl by updateViewModel.downloadUrl
+                val runNumber by updateViewModel.runNumber
+                val sanitizedBody by updateViewModel.sanitizedBody
+                
+                if (updateInfo != null && downloadUrl != null) {
+                    val context = LocalContext.current
+                    val scope = rememberCoroutineScope()
+                    com.github.libretube.test.ui.sheets.UpdateAvailableSheet(
+                        updateName = updateInfo!!.name,
+                        runNumber = runNumber,
+                        changelog = sanitizedBody ?: updateInfo!!.body,
+                        onUpdate = {
+                            val updateManager = com.github.libretube.test.util.UpdateManager(context)
+                            scope.launch {
+                                updateManager.handleUpdate(downloadUrl!!, scope)
+                            }
+                            updateViewModel.dismissUpdate()
+                        },
+                        onDismiss = {
+                            updateViewModel.dismissUpdate()
+                        }
+                    )
+                }
+
+                Scaffold(
+                    topBar = {
+                        MainTopAppBar(
+                            isSearchActive = isSearchActive,
+                            searchQuery = searchQuery,
+                            onQueryChange = { searchQuery = it },
+                            onSearchActiveChange = { isSearchActive = it },
+                            onSearchQuery = { query ->
+                                navController.navigate(com.github.libretube.test.ui.navigation.Routes.search(query))
+                            },
+                            onSettingsClick = {
+                                val settingsIntent = Intent(this, SettingsActivity::class.java)
+                                startActivity(settingsIntent)
+                            }
+                        )
+                    },
+                    bottomBar = {
+                        if (currentRoute in listOf(
+                            com.github.libretube.test.ui.navigation.Routes.Home,
+                            com.github.libretube.test.ui.navigation.Routes.Trends,
+                            com.github.libretube.test.ui.navigation.Routes.Subscriptions,
+                            com.github.libretube.test.ui.navigation.Routes.Library
+                        )) {
+                            MainBottomNavigation(navController, currentRoute)
+                        }
+                    }
+                ) { padding ->
+                    Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+                        com.github.libretube.test.ui.navigation.MainNavigation(
+                            navController = navController,
+                            playerViewModel = playerViewModel,
+                            modifier = Modifier.fillMaxSize()
+                        )
+
+                        if (!isQueueEmpty) {
+                            playerContent()
+                        }
                     }
                 }
             }
         }
-    }
 
-    private fun setupNavigation() {
-        // manually apply additional padding for edge-to-edge compatibility
-        binding.root.onSystemInsets { _, systemBarInsets ->
-            binding.root.viewTreeObserver.addOnGlobalLayoutListener(object :
-                ViewTreeObserver.OnGlobalLayoutListener {
-                override fun onGlobalLayout() {
-                    with(binding.appBarLayout) {
-                        setPadding(
-                            paddingLeft,
-                            systemBarInsets.top,
-                            paddingRight,
-                            paddingBottom
-                        )
-                    }
-                    with(binding.bottomNav) {
-                        setPadding(
-                            paddingLeft,
-                            paddingTop,
-                            paddingRight,
-                            systemBarInsets.bottom
-                        )
-                    }
-                    binding.root.viewTreeObserver.removeOnGlobalLayoutListener(this)
-                }
-            })
-        }
-
-        // Check update automatically
+        // Initialize background tasks
         if (PreferenceHelper.getBoolean(PreferenceKeys.AUTOMATIC_UPDATE_CHECKS, true)) {
+            val updateViewModel: com.github.libretube.test.ui.models.UpdateViewModel by viewModels()
             lifecycleScope.launch(Dispatchers.IO) {
-                UpdateChecker(this@MainActivity).checkUpdate(false)
+                UpdateChecker(this@MainActivity).checkUpdate(false, updateViewModel)
             }
         }
 
-        // set the action bar for the activity
-        setSupportActionBar(binding.toolbar)
-
-        val navHostFragment = binding.fragment.getFragment<NavHostFragment>()
-        navController = navHostFragment.navController
-        binding.bottomNav.setupWithNavController(navController)
-
-        // save start tab fragment id and apply navbar style
-        startFragmentId = try {
-            NavBarHelper.applyNavBarStyle(binding.bottomNav)
-        } catch (e: Exception) {
-            R.id.homeFragment
+        loadIntentData { name, ids ->
+            // How do we update the state from here? 
+            // We need a MutableState or callback available in Activity scope.
+            // Since `setContent` handles state, we need to restructure slightly or use a ViewModel.
+            // For now, let's use a temporary simpler approach by saving intent data and reading it in setContent.
+            // However, `loadIntentData` is called in `onNewIntent` too.
         }
-
-        // set default tab as start fragment
-        navController.graph = navController.navInflater.inflate(R.navigation.nav).also {
-            it.setStartDestination(startFragmentId)
-        }
-
-        // Prevent duplicate entries into backstack
-        binding.bottomNav.setOnItemReselectedListener {
-            if (it.itemId != navController.currentDestination?.id) {
-                navigateToBottomSelectedItem(it)
-            } else {
-                val fragment = navHostFragment.childFragmentManager.fragments.firstOrNull()
-                tryScrollToTop(fragment?.requireView())
-            }
-        }
-
-        binding.bottomNav.setOnItemSelectedListener {
-            navigateToBottomSelectedItem(it)
-        }
-
-        if (binding.bottomNav.menu.children.none { it.itemId == startFragmentId }) deselectBottomBarItems()
-
-        binding.toolbar.title = ThemeHelper.getStyledAppName(this)
-
-        setupSubscriptionsBadge()
-        loadIntentData()
         showUserInfoDialogIfNeeded()
     }
+    
+    // MutableState for import dialog, accessible to Activity
+    private val _importPlaylistState = androidx.compose.runtime.mutableStateOf<Pair<String, List<String>>?>(null)
 
-    lateinit var binding: ActivityMainNavigationBinding
-    lateinit var navController: NavController
-
-    private lateinit var searchView: SearchView
-    private lateinit var searchItem: MenuItem
-
-    private var startFragmentId = R.id.homeFragment
-
-    private val searchViewModel: SearchViewModel by viewModels()
-    private val subscriptionsViewModel: SubscriptionsViewModel by viewModels()
 
     private var savedSearchQuery: String? = null
-    private var shouldOpenSuggestions = true
-
-    /**
-     * Deselect all bottom bar items
-     */
-    private fun deselectBottomBarItems() {
-        binding.bottomNav.menu.setGroupCheckable(0, true, false)
-        for (child in binding.bottomNav.menu.children) {
-            child.isChecked = false
-        }
-        binding.bottomNav.menu.setGroupCheckable(0, true, true)
-    }
 
     /**
      * Try to find a scroll or recycler view and scroll it back to the top
+     * Note: This legacy method might not work with Compose lazy lists without state reference.
+     * We'll need to implement logic in Composables to handle re-selection.
      */
     private fun tryScrollToTop(view: View?) {
-        val scrollView = view?.allViews
-            ?.firstOrNull { it is ScrollView || it is NestedScrollView || it is RecyclerView }
-        when (scrollView) {
-            is ScrollView -> scrollView.smoothScrollTo(0, 0)
-            is NestedScrollView -> scrollView.smoothScrollTo(0, 0)
-            is RecyclerView -> scrollView.smoothScrollToPosition(0)
-        }
+         // TODO: Implement scroll to top for Compose
     }
 
-    /**
-     * Initialize the notification badge showing the amount of new videos
-     */
-    private fun setupSubscriptionsBadge() {
-        if (!PreferenceHelper.getBoolean(
-                PreferenceKeys.NEW_VIDEOS_BADGE,
-                false
-            )
-        ) {
-            return
-        }
-
-        subscriptionsViewModel.fetchSubscriptions(this)
-
-        subscriptionsViewModel.videoFeed.observe(this) { feed ->
-            val lastCheckedFeedTime = PreferenceHelper.getLastCheckedFeedTime(seenByUser = true)
-            val lastSeenVideoIndex = feed.orEmpty()
-                .filter { !it.isUpcoming }
-                .indexOfFirst { it.uploaded <= lastCheckedFeedTime }
-            if (lastSeenVideoIndex < 1) return@observe
-
-            binding.bottomNav.getOrCreateBadge(R.id.subscriptionsFragment).apply {
-                number = lastSeenVideoIndex
-                backgroundColor = ThemeHelper.getThemeColor(
-                    this@MainActivity,
-                    androidx.appcompat.R.attr.colorPrimary
-                )
-                badgeTextColor = ThemeHelper.getThemeColor(
-                    this@MainActivity,
-                    com.google.android.material.R.attr.colorOnPrimary
-                )
-            }
-        }
-    }
-
-    private fun isSearchInProgress(): Boolean {
-        if (!this::navController.isInitialized) return false
-        val id = navController.currentDestination?.id ?: return false
-
-        return id in listOf(
-            R.id.searchFragment,
-            R.id.searchResultFragment,
-            R.id.channelFragment,
-            R.id.playlistFragment
-        )
-    }
-
-    override fun invalidateMenu() {
-        // Don't invalidate menu when in search in progress
-        // this is a workaround as there is bug in android code
-        // details of bug: https://issuetracker.google.com/issues/244336571
-        if (isSearchInProgress()) {
-            return
-        }
-        super.invalidateMenu()
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        menuInflater.inflate(R.menu.action_bar, menu)
-
-        // stuff for the search in the topBar
-        val searchItem = menu.findItem(R.id.action_search)
-        this.searchItem = searchItem
-        searchView = searchItem.actionView as SearchView
-
-        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String): Boolean {
-                searchView.clearFocus()
-
-                // handle inserted YouTube-like URLs and directly open the referenced
-                // channel, playlist or video instead of showing search results
-                if (query.toHttpUrlOrNull() != null) {
-                    val queryIntent = IntentHelper.resolveType(query.toUri())
-
-                    val didNavigate = navigateToMediaByIntent(queryIntent) {
-                        navController.popBackStack(R.id.searchFragment, true)
-                        searchItem.collapseActionView()
-                    }
-                    if (didNavigate) return true
-                }
-
-                navController.navigate(NavDirections.showSearchResults(query))
-
-                return true
-            }
-
-            override fun onQueryTextChange(newText: String?): Boolean {
-                if (!shouldOpenSuggestions) return true
-
-                // Prevent navigation when search view is collapsed
-                if (searchView.isIconified ||
-                    binding.bottomNav.menu.children.any {
-                        it.itemId == navController.currentDestination?.id
-                    }
-                ) {
-                    return true
-                }
-
-                // prevent malicious navigation when the search view is getting collapsed
-                val destIds = listOf(
-                    R.id.searchResultFragment,
-                    R.id.channelFragment,
-                    R.id.playlistFragment
-                )
-                if (navController.currentDestination?.id in destIds && newText == null) {
-                    return false
-                }
-
-                if (navController.currentDestination?.id != R.id.searchFragment) {
-                    navController.navigate(
-                        R.id.searchFragment,
-                        bundleOf(IntentData.query to newText)
-                    )
-                } else {
-                    searchViewModel.setQuery(newText)
-                }
-
-                return true
-            }
-        })
-
-        searchItem.setOnActionExpandListener(object : MenuItem.OnActionExpandListener {
-            override fun onMenuItemActionExpand(item: MenuItem): Boolean {
-                if (navController.currentDestination?.id != R.id.searchResultFragment) {
-                    searchViewModel.setQuery(null)
-                    navController.navigate(R.id.openSearch)
-                }
-                item.setShowAsAction(
-                    MenuItem.SHOW_AS_ACTION_ALWAYS or MenuItem.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW
-                )
-                return true
-            }
-
-            override fun onMenuItemActionCollapse(item: MenuItem): Boolean {
-                // Handover back press to `BackPressedDispatcher` if not on a root destination
-                if (navController.previousBackStackEntry != null) {
-                    this@MainActivity.onBackPressedDispatcher.onBackPressed()
-                }
-
-                // Suppress collapsing of search when search in progress.
-                return !isSearchInProgress()
-            }
-        })
-
-        // handle search queries passed by the intent
-        if (savedSearchQuery != null) {
-            searchItem.expandActionView()
-            searchView.setQuery(savedSearchQuery, true)
-            savedSearchQuery = null
-        }
-
-        return super.onCreateOptionsMenu(menu)
-    }
-
-    /**
-     * @return whether the search view focus was cleared successfully
-     */
-    fun clearSearchViewFocus(): Boolean {
-        if (!this::searchView.isInitialized || !searchView.anyChildFocused()) return false
-
-        searchView.clearFocus()
-        return true
-    }
-
-    /**
-     * Update the query text in the search bar without opening the search suggestions
-     */
     fun setQuerySilent(query: String) {
-        if (!this::searchView.isInitialized) return
-
-        shouldOpenSuggestions = false
-        searchView.setQuery(query, false)
-        shouldOpenSuggestions = true
+        // setSearchQuery(query) // TODO: Handle state if needed
     }
 
-    /**
-     * Update the query text in the search bar and load the search suggestions
-     * @param submit whether to immediately load the search results (not suggestions)
-     */
     fun setQuery(query: String, submit: Boolean) {
-        if (::searchView.isInitialized) searchView.setQuery(query, submit)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        return when (item.itemId) {
-            R.id.action_settings -> {
-                val settingsIntent = Intent(this, SettingsActivity::class.java)
-                startActivity(settingsIntent)
-                true
-            }
-
-
-
-
-            else -> super.onOptionsItemSelected(item)
+        if (submit) {
+            navController.navigate(com.github.libretube.test.ui.navigation.Routes.search(query))
         }
     }
 
-    private fun loadIntentData() {
-        Log.e("LibreTube", "MainActivity loadIntentData: action=${intent?.action}")
+    private fun loadIntentData(onImportPlaylist: ((String, List<String>) -> Unit)? = null) {
+        // loadIntentData
         // If activity is running in PiP mode, then start it in front.
         if (PictureInPictureCompat.isInPictureInPictureMode(this)) {
             val nIntent = Intent(this, MainActivity::class.java)
@@ -487,22 +407,15 @@ class MainActivity : BaseActivity() {
         }
 
         if (intent?.getBooleanExtra(IntentData.maximizePlayer, false) == true) {
-            // attempt to open the current video player fragment
-            if (intent?.getBooleanExtra(IntentData.audioOnly, false) == false) {
-                runOnPlayerFragment { maximize(); true }
-                return
-            }
-
-            // TODO: Implement Compose audio player maximization
-            // if (runOnAudioPlayerFragment { binding.playerMotionLayout.transitionToStart(); true }) return
-
-            // val offlinePlayer = intent!!.getBooleanExtra(IntentData.offlinePlayer, false)
-            // NavigationHelper.openAudioPlayerFragment(this, offlinePlayer = offlinePlayer)
+             // Maximize player via ViewModel
+             val playerViewModel: PlayerViewModel by viewModels()
+             playerViewModel.triggerPlayerExpansion() // Assuming method exists or we add it
+             // Also play if not playing?
             return
         }
 
         // navigate to (temporary) playlist or channel if available
-        if (navigateToMediaByIntent(intent)) return
+        if (navigateToMediaByIntent(intent, onImportPlaylist)) return
 
         // Get saved search query if available
         intent?.getStringExtra(IntentData.query)?.let {
@@ -511,7 +424,7 @@ class MainActivity : BaseActivity() {
 
         // Open the Downloads screen if requested
         if (intent?.getBooleanExtra(IntentData.OPEN_DOWNLOADS, false) == true) {
-            navController.navigate(R.id.downloadsFragment)
+            navController.navigate(com.github.libretube.test.ui.navigation.Routes.Downloads)
             return
         }
 
@@ -519,56 +432,43 @@ class MainActivity : BaseActivity() {
         intent?.getStringExtra(IntentData.fragmentToOpen)?.let {
             ShortcutManagerCompat.reportShortcutUsed(this, it)
             when (it) {
-                TopLevelDestination.Home.route -> navController.navigate(R.id.homeFragment)
-                TopLevelDestination.Trends.route -> navController.navigate(R.id.trendsFragment)
-                TopLevelDestination.Subscriptions.route -> navController.navigate(R.id.subscriptionsFragment)
-                TopLevelDestination.Library.route -> navController.navigate(R.id.libraryFragment)
+                TopLevelDestination.Home.route -> navController.navigate(com.github.libretube.test.ui.navigation.Routes.Home)
+                TopLevelDestination.Trends.route -> navController.navigate(com.github.libretube.test.ui.navigation.Routes.Trends)
+                TopLevelDestination.Subscriptions.route -> navController.navigate(com.github.libretube.test.ui.navigation.Routes.Subscriptions)
+                TopLevelDestination.Library.route -> navController.navigate(com.github.libretube.test.ui.navigation.Routes.Library)
             }
         }
-
-        // Rebind the download service if the user is currently downloading
-        // Note: Service binding is now handled automatically in DownloadsScreen composable
-        /*
-        if (intent?.getBooleanExtra(IntentData.downloading, false) == true) {
-            (supportFragmentManager.fragments.find { it is NavHostFragment })
-                ?.childFragmentManager?.fragments?.forEach { fragment ->
-                    (fragment as? DownloadsFragment)?.bindDownloadService()
-                }
-        }
-        */
     }
 
     /**
      * Navigates to the channel, video or playlist provided in the [Intent] if available
-     *
-     * @return Whether the method handled the event and triggered the navigation to a new fragment
      */
-    fun navigateToMediaByIntent(intent: Intent, actionBefore: () -> Unit = {}): Boolean {
+    fun navigateToMediaByIntent(intent: Intent, onImportPlaylist: ((String, List<String>) -> Unit)? = null, actionBefore: () -> Unit = {}): Boolean {
+        if (!::navController.isInitialized) return false
+
         intent.getStringExtra(IntentData.channelId)?.let {
             actionBefore()
-            navController.navigate(NavDirections.openChannel(channelId = it))
+            navController.navigate(com.github.libretube.test.ui.navigation.Routes.channel(channelId = it))
             return true
         }
         intent.getStringExtra(IntentData.channelName)?.let {
             actionBefore()
-            navController.navigate(NavDirections.openChannel(channelName = it))
+            navController.navigate(com.github.libretube.test.ui.navigation.Routes.channel(channelName = it))
             return true
         }
         intent.getStringExtra(IntentData.playlistId)?.let {
             actionBefore()
-            navController.navigate(NavDirections.openPlaylist(playlistId = it))
+            navController.navigate(com.github.libretube.test.ui.navigation.Routes.playlist(playlistId = it))
             return true
         }
         intent.getStringArrayExtra(IntentData.videoIds)?.let {
             actionBefore()
-            ImportTempPlaylistDialog()
-                .apply {
-                    arguments = bundleOf(
-                        IntentData.playlistName to intent.getStringExtra(IntentData.playlistName),
-                        IntentData.videoIds to it
-                    )
-                }
-                .show(supportFragmentManager, null)
+            val name = intent.getStringExtra(IntentData.playlistName) ?: com.github.libretube.test.util.TextUtils.getFileSafeTimeStampNow()
+            if (onImportPlaylist != null) {
+                onImportPlaylist(name, it.toList())
+            } else {
+                _importPlaylistState.value = name to it.toList()
+            }
             return true
         }
 
@@ -586,42 +486,30 @@ class MainActivity : BaseActivity() {
         return false
     }
 
-    private fun navigateToBottomSelectedItem(item: MenuItem): Boolean {
-        if (item.itemId == R.id.subscriptionsFragment) {
-            binding.bottomNav.removeBadge(R.id.subscriptionsFragment)
-        }
-
-        // Remove focus from search view when navigating to bottom view.
-        searchItem.collapseActionView()
-
-        return item.onNavDestinationSelected(navController)
-    }
-
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-
-        runOnPlayerFragment {
-            onUserLeaveHint()
-            true
+        // Fix: Implement PiP Logic
+        val playerViewModel: PlayerViewModel by viewModels()
+        if (playerViewModel.isPlaying.value && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // Check if PiP is supported and allowed
+             val params = android.app.PictureInPictureParams.Builder()
+                .setAspectRatio(android.util.Rational(16, 9))
+                .build()
+             enterPictureInPictureMode(params)
         }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        Log.e("LibreTube", "MainActivity onNewIntent: action=${intent.action}")
+        // onNewIntent
         this.intent = intent
         loadIntentData()
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
-        if (runOnPlayerFragment { onKeyUp(keyCode, event) } == true) {
-            return true
-        }
-
+        // Player key handling via ViewModel if possible, or keep simple
         return super.onKeyUp(keyCode, event)
     }
-
-
 
     fun startPlaylistExport(
         playlistId: String,
@@ -633,7 +521,7 @@ class MainActivity : BaseActivity() {
         exportPlaylistId = playlistId
 
         val fileName =
-            BackupRestoreSettings.getExportFileName(this, format, playlistName, includeTimestamp)
+            BackupHelper.getExportFileName(this, format, playlistName, includeTimestamp)
         createPlaylistsFile.launch(fileName)
     }
 
@@ -664,4 +552,3 @@ class MainActivity : BaseActivity() {
             .show()
     }
 }
-

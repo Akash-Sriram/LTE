@@ -4,7 +4,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
-import com.github.libretube.test.ui.dialogs.ShareDialog
+import com.github.libretube.test.constants.IntentData
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -22,6 +22,6 @@ data class LocalSubscription(
         name: String? = null,
         avatar: String? = null,
         verified: Boolean = false
-    ) : this(channelId, "${ShareDialog.YOUTUBE_FRONTEND_URL}/channel/$channelId", name, avatar, verified)
+    ) : this(channelId, "${IntentData.YOUTUBE_FRONTEND_URL}/channel/$channelId", name, avatar, verified)
 }
 

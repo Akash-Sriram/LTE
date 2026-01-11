@@ -9,6 +9,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,6 +27,8 @@ import com.github.libretube.test.ui.components.VideoCard
 import com.github.libretube.test.ui.components.VideoCardState
 import com.github.libretube.test.ui.components.PlaylistCardState
 import com.github.libretube.test.ui.components.LibraryShelfItem
+import com.github.libretube.test.ui.sheets.DownloadPlaylistBottomSheet
+import com.github.libretube.test.extensions.toID
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 
@@ -36,9 +43,169 @@ data class LibraryScreenState(
     val downloadsCardVisible: Boolean = true
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
+    navController: androidx.navigation.NavController,
+    libraryViewModel: com.github.libretube.test.ui.models.LibraryViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    
+    val historyItems by libraryViewModel.historyItems.collectAsState(initial = emptyList())
+    val historyCount by libraryViewModel.historyCount.collectAsState(initial = 0)
+    val downloadCount by libraryViewModel.downloadCount.collectAsState(initial = 0)
+    val playlists by libraryViewModel.playlists.collectAsState(initial = emptyList())
+    val bookmarks by libraryViewModel.bookmarks.collectAsState(initial = emptyList())
+    val isRefreshing by libraryViewModel.isRefreshing.collectAsState(initial = false)
+
+    var showPlaylistOptions by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var selectedPlaylistId by remember { androidx.compose.runtime.mutableStateOf("") }
+    var selectedPlaylistName by remember { androidx.compose.runtime.mutableStateOf("") }
+    var selectedPlaylistType by remember { androidx.compose.runtime.mutableStateOf(com.github.libretube.test.enums.PlaylistType.PUBLIC) }
+    var showDownloadPlaylist by remember { androidx.compose.runtime.mutableStateOf(false) }
+
+    val watchHistoryEnabled = com.github.libretube.test.helpers.PreferenceHelper.getBoolean(com.github.libretube.test.constants.PreferenceKeys.WATCH_HISTORY_TOGGLE, true)
+    
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        libraryViewModel.refreshData()
+    }
+    
+    // Resume effect to refresh data
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                 libraryViewModel.refreshData()
+             }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    val state = LibraryScreenState(
+        historyItems = historyItems.map { it.toVideoCardState() },
+        historyCount = historyCount,
+        downloadCount = downloadCount,
+        playlists = playlists.map { it.toPlaylistCardState() },
+        bookmarks = bookmarks.map { it.toPlaylistCardState() },
+        isRefreshing = isRefreshing,
+        watchHistoryEnabled = watchHistoryEnabled,
+        downloadsCardVisible = true // Assuming always visible or logic from Fragment
+    )
+
+    LibraryContent(
+        state = state,
+        onHistoryClick = {
+            navController.navigate(com.github.libretube.test.ui.navigation.Routes.WatchHistory)
+        },
+        onDownloadsClick = {
+            navController.navigate(com.github.libretube.test.ui.navigation.Routes.Downloads)
+        },
+        onRecentlyWatchedSeeAll = {
+            navController.navigate(com.github.libretube.test.ui.navigation.Routes.WatchHistory)
+        },
+        onPlaylistsSeeAll = {
+            navController.navigate(
+                 com.github.libretube.test.ui.navigation.Routes.libraryListing(com.github.libretube.test.ui.screens.LibraryListingType.PLAYLISTS.name)
+            )
+        },
+        onBookmarksSeeAll = {
+            navController.navigate(
+                 com.github.libretube.test.ui.navigation.Routes.libraryListing(com.github.libretube.test.ui.screens.LibraryListingType.BOOKMARKS.name)
+            )
+        },
+        onCreatePlaylistClick = {
+             // TODO: Create playlist dialog
+        },
+        onVideoClick = { videoId ->
+             com.github.libretube.test.helpers.NavigationHelper.navigateVideo(context, videoId)
+        },
+        onPlaylistClick = { playlistId ->
+             com.github.libretube.test.helpers.NavigationHelper.navigatePlaylist(context, playlistId, com.github.libretube.test.enums.PlaylistType.LOCAL)
+        },
+        onPlaylistLongClick = { id, name ->
+            selectedPlaylistId = id
+            selectedPlaylistName = name
+            selectedPlaylistType = com.github.libretube.test.enums.PlaylistType.LOCAL
+            showPlaylistOptions = true
+        },
+        onBookmarkClick = { playlistId ->
+             com.github.libretube.test.helpers.NavigationHelper.navigatePlaylist(context, playlistId, com.github.libretube.test.enums.PlaylistType.PUBLIC)
+        },
+        onBookmarkLongClick = { id, name ->
+            selectedPlaylistId = id
+            selectedPlaylistName = name
+            selectedPlaylistType = com.github.libretube.test.enums.PlaylistType.PUBLIC
+            showPlaylistOptions = true
+        },
+        onRefresh = {
+            libraryViewModel.refreshData()
+        }
+    )
+
+    if (showPlaylistOptions) {
+        com.github.libretube.test.ui.sheets.PlaylistOptionsSheet(
+            playlistId = selectedPlaylistId,
+            playlistName = selectedPlaylistName,
+            playlistType = selectedPlaylistType,
+            onDismissRequest = { showPlaylistOptions = false },
+            onShareClick = { /* TODO */ },
+            onEditDescriptionClick = { /* TODO */ },
+            onDownloadClick = {
+                showDownloadPlaylist = true
+            },
+            onSortClick = { /* TODO */ },
+            onReorderClick = {
+                // Navigate to listing for reorder
+            },
+            onExportClick = { /* TODO */ },
+            onBookmarkChange = {
+                libraryViewModel.refreshData()
+            }
+        )
+    }
+
+    if (showDownloadPlaylist) {
+        DownloadPlaylistBottomSheet(
+            playlistId = selectedPlaylistId,
+            playlistName = selectedPlaylistName,
+            playlistType = selectedPlaylistType,
+            onDismissRequest = { showDownloadPlaylist = false }
+        )
+    }
+}
+
+// Extensions for LibraryScreen
+private fun com.github.libretube.test.db.obj.WatchHistoryItem.toVideoCardState() = VideoCardState(
+    videoId = videoId,
+    title = title ?: "",
+    uploaderName = uploader ?: "",
+    views = "", // History usually doesn't show views, maybe timestamp?
+    duration = duration?.let { android.text.format.DateUtils.formatElapsedTime(it) } ?: "",
+    thumbnailUrl = thumbnailUrl,
+    uploaderAvatarUrl = uploaderAvatar
+)
+
+private fun com.github.libretube.test.api.obj.Playlists.toPlaylistCardState() = PlaylistCardState(
+    playlistId = id ?: "",
+    title = name ?: "",
+    description = shortDescription ?: "",
+    videoCount = videos,
+    thumbnailUrl = thumbnail ?: ""
+)
+
+private fun com.github.libretube.test.db.obj.PlaylistBookmark.toPlaylistCardState() = PlaylistCardState(
+    playlistId = playlistId,
+    title = playlistName ?: "",
+    description = uploader ?: "",
+    videoCount = videos.toLong(),
+    thumbnailUrl = thumbnailUrl ?: ""
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LibraryContent(
     state: LibraryScreenState,
     onHistoryClick: () -> Unit,
     onDownloadsClick: () -> Unit,
@@ -48,7 +215,9 @@ fun LibraryScreen(
     onCreatePlaylistClick: () -> Unit,
     onVideoClick: (String) -> Unit,
     onPlaylistClick: (String) -> Unit,
+    onPlaylistLongClick: (String, String) -> Unit,
     onBookmarkClick: (String) -> Unit,
+    onBookmarkLongClick: (String, String) -> Unit,
     onRefresh: () -> Unit
 ) {
     Scaffold(
@@ -126,7 +295,8 @@ fun LibraryScreen(
                                 items(state.playlists) { playlist ->
                                     LibraryShelfItem(
                                         state = playlist,
-                                        onClick = { onPlaylistClick(playlist.playlistId) }
+                                        onClick = { onPlaylistClick(playlist.playlistId) },
+                                        onLongClick = { onPlaylistLongClick(playlist.playlistId, playlist.title) }
                                     )
                                 }
                             }
@@ -149,7 +319,8 @@ fun LibraryScreen(
                                 items(state.bookmarks) { bookmark ->
                                     LibraryShelfItem(
                                         state = bookmark,
-                                        onClick = { onBookmarkClick(bookmark.playlistId) }
+                                        onClick = { onBookmarkClick(bookmark.playlistId) },
+                                        onLongClick = { onBookmarkLongClick(bookmark.playlistId, bookmark.title) }
                                     )
                                 }
                             }

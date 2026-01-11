@@ -63,18 +63,18 @@ object DeArrowUtil {
             if (!isExpired) {
                 try {
                     val content = JsonHelper.json.decodeFromString<DeArrowContent>(cachedItem.contentJson)
-                    android.util.Log.d("DeArrowUtil", "CACHE HIT: $videoId")
+                    // Cache hit
                     return content
                 } catch (e: Exception) {
-                    android.util.Log.e("DeArrowUtil", "Cache parse error for $videoId", e)
+                    // Cache parse error
                 }
             } else {
-                android.util.Log.d("DeArrowUtil", "CACHE EXPIRED: $videoId")
+                // Cache expired
             }
         }
 
         // 2. Fetch from Network
-        android.util.Log.d("DeArrowUtil", "fetchDeArrowContent: Fetching for $videoId")
+        // Fetching DeArrow content
         val content = MediaServiceRepository.instance.getDeArrowContent(videoId)
         
         // 3. Save to Cache if successful
@@ -82,9 +82,9 @@ object DeArrowUtil {
             try {
                 val json = JsonHelper.json.encodeToString(content)
                 cacheDao.insert(DeArrowCacheItem(videoId, json))
-                android.util.Log.d("DeArrowUtil", "CACHE SAVE: $videoId")
+                // Cache save
             } catch (e: Exception) {
-                android.util.Log.e("DeArrowUtil", "Cache save error for $videoId", e)
+                // Cache save error
             }
         }
         
@@ -112,14 +112,14 @@ object DeArrowUtil {
             val (newTitle, newThumbnail) = extractTitleAndThumbnail(dataVal, vidId, streams.duration.toFloat())
             if (newTitle != null && PreferenceHelper.getBoolean(PreferenceKeys.DEARROW_TITLES, true)) {
                 streams.title = newTitle
-                Log.d("DeArrowUtil", "SUCCESS: Applied title for $vidId")
+                // Applied title
             }
             if (newThumbnail != null && isThumbsEnabled) {
                 streams.thumbnailUrl = newThumbnail
                 thumbnailApplied = true
-                Log.d("DeArrowUtil", "SUCCESS: Applied thumb for $vidId. URL: $newThumbnail")
+                // Applied thumb
             }
-        } ?: Log.d("DeArrowUtil", "NO CURATION: No DeArrow data for $vidId")
+        }
         
         if (!thumbnailApplied && isThumbsEnabled) {
              // Fallback to mq2.jpg (320x180, 16:9)
@@ -146,7 +146,7 @@ object DeArrowUtil {
             if (!isDeArrowEnabled) return items
         }
 
-        android.util.Log.d("DeArrowFeed", "deArrowStreamItems: count=${items.size}, enabled=$isDeArrowEnabled, thumbs=$isThumbsEnabled")
+        // Processing stream items
 
         if (items.isEmpty()) return items
 
@@ -172,7 +172,7 @@ object DeArrowUtil {
                         }
                         if (newThumbnail != null && isThumbsEnabled) {
                             item.thumbnail = newThumbnail
-                            Log.d("DeArrowFeed", "SUCCESS: Applied DeArrow thumb for $videoId. URL: $newThumbnail")
+                            // Applied DeArrow thumb
                             thumbnailApplied = true
                         }
                     }
@@ -200,7 +200,7 @@ object DeArrowUtil {
             if (!isDeArrowEnabled) return items
         }
 
-        android.util.Log.d("DeArrowFeed", "deArrowContentItems: count=${items.size}, enabled=$isDeArrowEnabled, thumbs=$isThumbsEnabled")
+        // Processing content items
 
         if (items.isEmpty()) return items
 
@@ -226,10 +226,10 @@ object DeArrowUtil {
                         }
                         if (newThumbnail != null && isThumbsEnabled) {
                             item.thumbnail = newThumbnail
-                            Log.d("DeArrowFeed", "SUCCESS: Applied random thumb for $videoId. URL: $newThumbnail")
+                            // Applied random thumb
                             thumbnailApplied = true
                         } else {
-                            Log.d("DeArrowFeed", "FAILURE: Could not gen thumb for $videoId. RandomTime=${dataVal.randomTime}, ItemDur=${item.duration}, ApiDur=${dataVal.videoDuration}")
+                            // Failed to gen thumb
                         }
                     }
                     

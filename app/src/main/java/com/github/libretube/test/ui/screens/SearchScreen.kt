@@ -35,8 +35,19 @@ import com.github.libretube.test.ui.components.VideoCardState
 import android.text.format.DateUtils
 import com.github.libretube.test.util.TextUtils
 import com.github.libretube.test.api.JsonHelper
-import kotlinx.serialization.encodeToString
 import androidx.compose.ui.platform.LocalContext
+import com.github.libretube.test.ui.sheets.DownloadBottomSheet
+import com.github.libretube.test.ui.sheets.DownloadPlaylistBottomSheet
+import com.github.libretube.test.extensions.toID
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import com.github.libretube.test.ui.sheets.ShareBottomSheet
+import com.github.libretube.test.enums.ShareObjectType
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -56,6 +67,22 @@ fun SearchScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    var showChannelOptions by remember { mutableStateOf(false) }
+    var showAddChannelToGroup by remember { mutableStateOf(false) }
+    var selectedChannel by remember { mutableStateOf<ContentItem?>(null) }
+    
+    var showVideoOptions by remember { mutableStateOf(false) }
+    var selectedVideo by remember { mutableStateOf<StreamItem?>(null) }
+    var showDownloadVideo by remember { mutableStateOf(false) }
+    
+    var showPlaylistOptions by remember { mutableStateOf(false) }
+    var selectedPlaylist by remember { mutableStateOf<ContentItem?>(null) }
+    var showDownloadPlaylist by remember { mutableStateOf(false) }
+
+    var showShareSheet by remember { mutableStateOf(false) }
+    var shareObjectType by remember { mutableStateOf(ShareObjectType.VIDEO) }
+    var selectedShareItem by remember { mutableStateOf<Pair<String, String>?>(null) } // id to title
+
     Column(modifier = modifier.fillMaxSize()) {
         // Filter Chips
         FlowRow(
@@ -123,12 +150,152 @@ fun SearchScreen(
             searchResults = searchResults,
             context = context,
             onVideoClick = onVideoClick,
-            onVideoLongClick = onVideoLongClick,
+            onVideoLongClick = { item ->
+                // Ensure item is cast to StreamItem or use properties
+                // ContentItem has url, title, etc. but we might need dummy mapping
+                // for VideoOptionsSheet or update VideoOptionsSheet to take more general data
+                selectedVideo = item as? StreamItem ?: StreamItem(
+                    url = item.url,
+                    title = item.title,
+                    uploaderName = item.uploaderName,
+                    views = item.views,
+                    uploaded = item.uploaded,
+                    duration = item.duration,
+                    thumbnail = item.thumbnail,
+                    uploaderAvatar = item.uploaderAvatar
+                )
+                showVideoOptions = true
+            },
             onChannelClick = onChannelClick,
-            onChannelLongClick = onChannelLongClick,
+            onChannelLongClick = { item ->
+                selectedChannel = item
+                showChannelOptions = true
+            },
             onPlaylistClick = onPlaylistClick,
-            onPlaylistLongClick = onPlaylistLongClick,
+            onPlaylistLongClick = { item ->
+                selectedPlaylist = item
+                showPlaylistOptions = true
+            },
             onUploaderClick = onUploaderClick
+        )
+    }
+
+    if (showChannelOptions && selectedChannel != null) {
+        val channel = selectedChannel!!
+        com.github.libretube.test.ui.sheets.ChannelOptionsSheet(
+            channelId = channel.url.toID(),
+            channelName = channel.name,
+            isSubscribed = true, // Simplified for now, should ideally check sub status
+            onDismissRequest = { showChannelOptions = false },
+            onShareClick = {
+                selectedShareItem = (channel.url?.toID() ?: "") to (channel.name ?: "")
+                shareObjectType = ShareObjectType.CHANNEL
+                showShareSheet = true
+            },
+            onAddToGroupClick = {
+                showChannelOptions = false
+                showAddChannelToGroup = true
+            },
+            onPlayLatestClick = {
+                // Logic from legacy ChannelOptionsBottomSheet
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    try {
+                        val fullChannel = com.github.libretube.test.api.MediaServiceRepository.instance.getChannel(channel.url.toID())
+                        fullChannel.relatedStreams.firstOrNull()?.url?.toID()?.let {
+                            withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                com.github.libretube.test.helpers.NavigationHelper.navigateVideo(context, it)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        // Log error
+                    }
+                }
+            },
+            onPlayBackgroundClick = {
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    try {
+                        val fullChannel = com.github.libretube.test.api.MediaServiceRepository.instance.getChannel(channel.url.toID())
+                        fullChannel.relatedStreams.firstOrNull()?.url?.toID()?.let {
+                            withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                com.github.libretube.test.helpers.BackgroundHelper.playOnBackground(context, it)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        // Log error
+                    }
+                }
+            }
+        )
+    }
+
+    if (showAddChannelToGroup && selectedChannel != null) {
+        com.github.libretube.test.ui.sheets.AddChannelToGroupSheet(
+            channelId = selectedChannel!!.url.toID(),
+            onDismissRequest = { showAddChannelToGroup = false }
+        )
+    }
+
+    if (showVideoOptions && selectedVideo != null) {
+        com.github.libretube.test.ui.sheets.VideoOptionsSheet(
+            streamItem = selectedVideo!!,
+            onDismissRequest = { showVideoOptions = false },
+            onShareClick = {
+                selectedShareItem = (selectedVideo!!.url?.toID() ?: "") to (selectedVideo!!.title ?: "")
+                shareObjectType = ShareObjectType.VIDEO
+                showShareSheet = true
+            },
+            onDownloadClick = {
+                showDownloadVideo = true
+            }
+        )
+    }
+
+    if (showDownloadVideo && selectedVideo != null) {
+        DownloadBottomSheet(
+            videoId = selectedVideo!!.url?.toID() ?: "",
+            onDismissRequest = { showDownloadVideo = false }
+        )
+    }
+
+    if (showPlaylistOptions && selectedPlaylist != null) {
+        val playlist = selectedPlaylist!!
+        com.github.libretube.test.ui.sheets.PlaylistOptionsSheet(
+            playlistId = playlist.url.toID(),
+            playlistName = playlist.name ?: "",
+            playlistType = com.github.libretube.test.enums.PlaylistType.PUBLIC, // Search results are usually public
+            onDismissRequest = { showPlaylistOptions = false },
+            onShareClick = {
+                selectedShareItem = playlist.url.toID() to (playlist.name ?: "")
+                shareObjectType = ShareObjectType.PLAYLIST
+                showShareSheet = true
+            },
+            onEditDescriptionClick = {},
+            onDownloadClick = {
+                showDownloadPlaylist = true
+            },
+            onSortClick = {},
+            onReorderClick = {},
+            onExportClick = {},
+            onBookmarkChange = {}
+        )
+    }
+
+    if (showDownloadPlaylist && selectedPlaylist != null) {
+        DownloadPlaylistBottomSheet(
+            playlistId = selectedPlaylist!!.url.toID(),
+            playlistName = selectedPlaylist!!.name ?: "",
+            playlistType = com.github.libretube.test.enums.PlaylistType.PUBLIC,
+            onDismissRequest = { showDownloadPlaylist = false }
+        )
+    }
+
+    if (showShareSheet && selectedShareItem != null) {
+        ShareBottomSheet(
+            id = selectedShareItem!!.first,
+            title = selectedShareItem!!.second,
+            shareObjectType = shareObjectType,
+            initialTimestamp = "0",
+            onDismissRequest = { showShareSheet = false }
         )
     }
 }

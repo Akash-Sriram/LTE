@@ -9,6 +9,9 @@ import android.util.Log
 import com.github.libretube.test.extensions.TAG
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CoroutineScope
+import androidx.core.net.toUri
+import com.github.libretube.test.extensions.toastFromMainDispatcher
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
@@ -89,7 +92,7 @@ class UpdateManager(private val context: Context) {
             true
         } catch (e: Exception) {
             com.github.libretube.logger.FileLogger.e("UpdateManager", "Error downloading APK", e)
-            Log.e(TAG(), "Error downloading APK", e)
+            // Error downloading APK
             builder.setContentText("Download failed")
                 .setOngoing(false)
                 .setProgress(0, 0, false)
@@ -134,11 +137,69 @@ class UpdateManager(private val context: Context) {
 
             session.commit(pendingIntent.intentSender)
             session.close()
-            Log.d(TAG(), "Installation session committed: $sessionId")
+            // Installation session committed
         } catch (e: Exception) {
-            Log.e(TAG(), "Error installing APK via Session API", e)
+            // Error installing APK via Session API
             if (sessionId != -1) {
                 packageInstaller.abandonSession(sessionId)
+            }
+        }
+    }
+
+    /**
+     * Handles the complete update flow: permission check, download, and installation trigger.
+     */
+    suspend fun handleUpdate(url: String, lifecycleScope: kotlinx.coroutines.CoroutineScope) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (!context.packageManager.canRequestPackageInstalls()) {
+                withContext(Dispatchers.Main) {
+                    android.widget.Toast.makeText(
+                        context,
+                        com.github.libretube.test.R.string.toast_install_permission_required,
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                    context.startActivity(Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                        data = ("package:" + context.packageName).toUri()
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    })
+                }
+                return
+            }
+        }
+
+        val outputFile = File(context.getExternalFilesDir(null), "LibreTube-Update.apk")
+        if (outputFile.exists()) {
+            outputFile.delete()
+        }
+
+        withContext(Dispatchers.Main) {
+            context.toastFromMainDispatcher(com.github.libretube.test.R.string.downloading)
+        }
+        
+        val downloadResult = withContext(Dispatchers.IO) {
+            downloadApk(url, outputFile)
+        }
+        com.github.libretube.logger.FileLogger.d("UpdateManager", "Download result: $downloadResult")
+
+        if (downloadResult) {
+            withContext(Dispatchers.Main) {
+                context.toastFromMainDispatcher("Download complete. Preparing install...")
+            }
+
+            try {
+                // Start installation via Session API
+                withContext(Dispatchers.IO) {
+                    installApk(outputFile)
+                }
+            } catch (e: Exception) {
+                com.github.libretube.logger.FileLogger.e("UpdateManager", "Installation failed", e)
+                withContext(Dispatchers.Main) {
+                    context.toastFromMainDispatcher("Installation failed: ${e.message}")
+                }
+            }
+        } else {
+            withContext(Dispatchers.Main) {
+                context.toastFromMainDispatcher("Download failed")
             }
         }
     }
@@ -152,7 +213,7 @@ class UpdateReceiver : android.content.BroadcastReceiver() {
         val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
         val message = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
         
-        Log.d("UpdateReceiver", "Received Update Status: $status, Message: $message")
+        // Received Update Status
 
         when (status) {
             PackageInstaller.STATUS_PENDING_USER_ACTION -> {
@@ -166,16 +227,16 @@ class UpdateReceiver : android.content.BroadcastReceiver() {
                     confirmIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     context.startActivity(confirmIntent)
                 } else {
-                    Log.e("UpdateReceiver", "Confirm Intent is null")
+                    // Confirm Intent is null
                     android.widget.Toast.makeText(context, "Update failed: Confirmation missing", android.widget.Toast.LENGTH_LONG).show()
                 }
             }
             PackageInstaller.STATUS_SUCCESS -> {
-                Log.d("UpdateReceiver", "Installation successful")
+                // Installation successful
                 android.widget.Toast.makeText(context, "Installation successful", android.widget.Toast.LENGTH_SHORT).show()
             }
             else -> {
-                Log.e("UpdateReceiver", "Installation failed: $status, $message")
+                // Installation failed
                 android.widget.Toast.makeText(context, "Installation failed: $message", android.widget.Toast.LENGTH_LONG).show()
             }
         }

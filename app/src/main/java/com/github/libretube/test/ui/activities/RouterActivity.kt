@@ -25,7 +25,7 @@ class RouterActivity : BaseActivity() {
     }
 
     private fun handleSendText(uri: Uri) {
-        Log.i(TAG(), uri.toString())
+        // RouterActivity URI received
 
         val intent = packageManager.getLaunchIntentForPackage(packageName)!!.let { intent ->
             IntentHelper.resolveType(intent, uri)

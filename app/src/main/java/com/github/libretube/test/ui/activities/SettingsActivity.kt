@@ -20,6 +20,10 @@ import com.github.libretube.test.ui.screens.SettingsGroupScreen
 import com.github.libretube.test.ui.screens.SettingsRegistry
 import com.github.libretube.test.ui.screens.SettingsScreen
 import com.github.libretube.test.ui.theme.LibreTubeTheme
+import androidx.activity.viewModels
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 
 class SettingsActivity : BaseActivity() {
 
@@ -32,6 +36,11 @@ class SettingsActivity : BaseActivity() {
                 val navController = rememberNavController()
                 val currentBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = currentBackStackEntry?.destination?.route ?: "main"
+
+                var showLogViewer by remember { mutableStateOf(false) }
+                val updateViewModel: com.github.libretube.test.ui.models.UpdateViewModel by viewModels()
+                val context = LocalContext.current
+                val scope = rememberCoroutineScope()
 
                 Scaffold(
                     topBar = {
@@ -65,6 +74,36 @@ class SettingsActivity : BaseActivity() {
                         )
                     }
                 ) { padding ->
+                    if (showLogViewer) {
+                        com.github.libretube.test.ui.sheets.LogViewerSheet(
+                            onDismissRequest = { showLogViewer = false }
+                        )
+                    }
+
+                    // Update Available Dialog State
+                    val updateInfo by updateViewModel.updateInfo
+                    val downloadUrl by updateViewModel.downloadUrl
+                    val runNumber by updateViewModel.runNumber
+                    val sanitizedBody by updateViewModel.sanitizedBody
+                    
+                    if (updateInfo != null && downloadUrl != null) {
+                        com.github.libretube.test.ui.sheets.UpdateAvailableBottomSheet(
+                            updateName = updateInfo!!.name,
+                            runNumber = runNumber,
+                            changelog = sanitizedBody ?: updateInfo!!.body,
+                            onUpdate = {
+                                val updateManager = com.github.libretube.test.util.UpdateManager(context)
+                                scope.launch {
+                                    updateManager.handleUpdate(downloadUrl!!, scope)
+                                }
+                                updateViewModel.dismissUpdate()
+                            },
+                            onDismissRequest = {
+                                updateViewModel.dismissUpdate()
+                            }
+                        )
+                    }
+
                     NavHost(
                         navController = navController,
                         startDestination = "main",
@@ -79,10 +118,12 @@ class SettingsActivity : BaseActivity() {
                                             navController.navigate(route)
                                         }
                                         "update" -> {
-                                            // Handle update check
+                                            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                                com.github.libretube.test.util.UpdateChecker(context).checkUpdate(true, updateViewModel)
+                                            }
                                         }
                                         "view_logs" -> {
-                                            // Handle logs
+                                            showLogViewer = true
                                         }
                                     }
                                 },

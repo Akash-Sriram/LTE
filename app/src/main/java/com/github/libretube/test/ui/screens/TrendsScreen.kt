@@ -26,22 +26,56 @@ import com.github.libretube.test.ui.components.VideoCardState
 import com.github.libretube.test.ui.models.TrendsViewModel
 import com.github.libretube.test.util.TextUtils
 import kotlinx.coroutines.launch
+import com.github.libretube.test.ui.sheets.DownloadBottomSheet
+import com.github.libretube.test.ui.sheets.ShareBottomSheet
+import com.github.libretube.test.enums.ShareObjectType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrendsScreen(
-    categories: List<TrendingCategory>,
-    viewModel: TrendsViewModel,
-    onVideoClick: (StreamItem) -> Unit,
-    onVideoLongClick: (StreamItem) -> Unit,
+    navController: androidx.navigation.NavController,
+    viewModel: com.github.libretube.test.ui.models.TrendsViewModel
+) {
+    val context = LocalContext.current
+    // Fetch categories directly as in Fragment
+    val categories = remember { com.github.libretube.test.api.MediaServiceRepository.instance.getTrendingCategories() }
+    
+    // TODO: Implement VideoOptionsBottomSheet as Composable or equivalent
+    // For now, we omit the long click sheet or implement a basic one if needed
+    
+    TrendsContent(
+        categories = categories,
+        viewModel = viewModel,
+        onVideoClick = { streamItem ->
+            com.github.libretube.test.helpers.NavigationHelper.navigateVideo(context, streamItem.url)
+        },
+        onVideoLongClick = { streamItem ->
+            // Handled in TrendsContent via state
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TrendsContent(
+    categories: List<com.github.libretube.test.api.TrendingCategory>,
+    viewModel: com.github.libretube.test.ui.models.TrendsViewModel,
+    onVideoClick: (com.github.libretube.test.api.obj.StreamItem) -> Unit,
+    onVideoLongClick: (com.github.libretube.test.api.obj.StreamItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val pagerState = rememberPagerState(pageCount = { categories.size })
+    val pagerState = androidx.compose.foundation.pager.rememberPagerState(pageCount = { categories.size })
     val scope = rememberCoroutineScope()
     var showRegionDialog by remember { mutableStateOf(false) }
     
     val trendingVideos by viewModel.trendingVideos.observeAsState(emptyMap())
+    
+    var showVideoOptions by remember { mutableStateOf(false) }
+    var selectedStreamItem by remember { mutableStateOf<com.github.libretube.test.api.obj.StreamItem?>(null) }
+    var showDownloadSheet by remember { mutableStateOf(false) }
+    var showAddToPlaylist by remember { mutableStateOf(false) } // Still legacy trigger for now
+    var showShareSheet by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxSize()) {
         // Top bar with tabs and region button
@@ -83,7 +117,7 @@ fun TrendsScreen(
         }
 
         // Pager for trending content
-        HorizontalPager(
+        androidx.compose.foundation.pager.HorizontalPager(
             state = pagerState,
             modifier = Modifier.fillMaxSize()
         ) { page ->
@@ -95,7 +129,10 @@ fun TrendsScreen(
                     viewModel.fetchTrending(context, category)
                 },
                 onVideoClick = onVideoClick,
-                onVideoLongClick = onVideoLongClick,
+                onVideoLongClick = { streamItem ->
+                    selectedStreamItem = streamItem
+                    showVideoOptions = true
+                },
                 onShowRegionDialog = { showRegionDialog = true }
             )
         }
@@ -117,6 +154,36 @@ fun TrendsScreen(
         categories.forEach { category ->
             viewModel.fetchTrending(context, category)
         }
+    }
+
+    if (showVideoOptions && selectedStreamItem != null) {
+        com.github.libretube.test.ui.sheets.VideoOptionsSheet(
+            streamItem = selectedStreamItem!!,
+            onDismissRequest = { showVideoOptions = false },
+            onShareClick = {
+                showShareSheet = true
+            },
+            onDownloadClick = {
+                showDownloadSheet = true
+            }
+        )
+    }
+
+    if (showShareSheet && selectedStreamItem != null) {
+        ShareBottomSheet(
+            id = selectedStreamItem!!.url?.substringAfterLast("/") ?: "",
+            title = selectedStreamItem!!.title ?: "",
+            shareObjectType = ShareObjectType.VIDEO,
+            initialTimestamp = "0",
+            onDismissRequest = { showShareSheet = false }
+        )
+    }
+
+    if (showDownloadSheet && selectedStreamItem != null) {
+        DownloadBottomSheet(
+            videoId = selectedStreamItem!!.url?.substringAfterLast("/") ?: "",
+            onDismissRequest = { showDownloadSheet = false }
+        )
     }
 }
 

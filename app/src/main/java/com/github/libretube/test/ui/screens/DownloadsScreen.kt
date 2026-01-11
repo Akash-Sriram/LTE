@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.combinedClickable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.github.libretube.test.R
@@ -31,9 +32,11 @@ import com.github.libretube.test.helpers.DownloadHelper
 import com.github.libretube.test.helpers.PreferenceHelper
 import com.github.libretube.test.obj.DownloadStatus
 import com.github.libretube.test.services.DownloadService
-import com.github.libretube.test.ui.fragments.DownloadTab
+import com.github.libretube.test.enums.DownloadTab
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.flow.collectLatest
+import com.github.libretube.test.ui.sheets.DownloadOptionsSheet
+import com.github.libretube.test.api.obj.StreamItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,6 +52,9 @@ fun DownloadsScreen(
     }
     var showSortDialog by remember { mutableStateOf(false) }
     var showDeleteAllDialog by remember { mutableStateOf(false) }
+
+    var showDownloadOptions by remember { mutableStateOf(false) }
+    var selectedDownload by remember { mutableStateOf<DownloadWithItems?>(null) }
 
     // Service binding
     val downloadService = rememberDownloadService()
@@ -202,7 +208,11 @@ fun DownloadsScreen(
                                 downloadService?.getService()?.pause(downloadItemId)
                             },
                             onDelete = {
-                                // Show delete dialog
+                                // Handled via options or direct delete if needed
+                            },
+                            onLongClick = {
+                                selectedDownload = download
+                                showDownloadOptions = true
                             },
                             onClick = {
                                 onNavigateToVideo(download.download.videoId)
@@ -289,8 +299,34 @@ fun DownloadsScreen(
             }
         )
     }
+
+    if (showDownloadOptions && selectedDownload != null) {
+        val download = selectedDownload!!
+        // Map Download to StreamItem for the sheet
+        val streamItem = StreamItem(
+            url = "https://www.youtube.com/watch?v=${download.download.videoId}",
+            title = download.download.title,
+            uploaderName = download.download.uploader,
+            thumbnail = download.download.thumbnailPath?.toString()
+        )
+        DownloadOptionsSheet(
+            streamItem = streamItem,
+            downloadTab = selectedTab ?: DownloadTab.ALL,
+            onDismissRequest = { showDownloadOptions = false },
+            onShareClick = { /* TODO */ },
+            onDeleteClick = {
+                // Delete download logic
+                showDownloadOptions = false
+            },
+            onGoToVideoClick = {
+                onNavigateToVideo(download.download.videoId)
+                showDownloadOptions = false
+            }
+        )
+    }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun DownloadItemCard(
     download: DownloadWithItems,
@@ -298,11 +334,16 @@ fun DownloadItemCard(
     onResume: () -> Unit,
     onPause: () -> Unit,
     onDelete: () -> Unit,
+    onLongClick: () -> Unit,
     onClick: () -> Unit
 ) {
     Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
     ) {
         Row(
             modifier = Modifier

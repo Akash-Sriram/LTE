@@ -134,20 +134,83 @@ object SettingsRegistry {
 
     @Composable
     fun getContentItems(): List<PreferenceItem> {
+        val segmentEntries = mapOf(
+            stringResource(R.string.automatic) to "automatic",
+            stringResource(R.string.disabled) to "off",
+            stringResource(R.string.enabled) to "show",
+            "Skip" to "skip"  // Hardcoded for now
+        )
+
         return listOf(
             PreferenceItem.Category(stringResource(R.string.sponsorblock)),
             PreferenceItem.Switch(
                 key = PreferenceKeys.CONTRIBUTE_TO_SB,
                 title = stringResource(R.string.enabled),
                 summary = stringResource(R.string.sponsorblock_summary),
+                defaultValue = true
+            ),
+            PreferenceItem.Switch(
+                key = "sb_enable_custom_colors",
+                title = stringResource(R.string.sb_custom_colors),
+                summary = stringResource(R.string.sb_custom_colors_summary),
                 defaultValue = false
             ),
+            PreferenceItem.Category(stringResource(R.string.category_segments)),
+            PreferenceItem.List(
+                key = "sponsor_category",
+                title = stringResource(R.string.category_sponsor),
+                summary = stringResource(R.string.category_sponsor_summary),
+                defaultValue = "automatic",
+                entries = segmentEntries
+            ),
+            PreferenceItem.Color(
+                key = "sponsor_color",
+                title = stringResource(R.string.color),
+                defaultValue = android.graphics.Color.parseColor("#00d400")
+            ),
+            PreferenceItem.List(
+                key = "interaction_category",
+                title = stringResource(R.string.category_interaction),
+                summary = stringResource(R.string.category_interaction_summary),
+                defaultValue = "off",
+                entries = segmentEntries
+            ),
+            PreferenceItem.Color(
+                key = "interaction_color",
+                title = stringResource(R.string.color),
+                defaultValue = android.graphics.Color.parseColor("#cc00ff")
+            ),
+            PreferenceItem.List(
+                key = "intro_category",
+                title = stringResource(R.string.category_intro),
+                summary = stringResource(R.string.category_intro_summary),
+                defaultValue = "off",
+                entries = segmentEntries
+            ),
+            PreferenceItem.Color(
+                key = "intro_color",
+                title = stringResource(R.string.color),
+                defaultValue = android.graphics.Color.parseColor("#00ffff")
+            ),
+            PreferenceItem.List(
+                key = "outro_category",
+                title = stringResource(R.string.category_outro),
+                summary = stringResource(R.string.category_outro_summary),
+                defaultValue = "off",
+                entries = segmentEntries
+            ),
+            PreferenceItem.Color(
+                key = "outro_color",
+                title = stringResource(R.string.color),
+                defaultValue = android.graphics.Color.parseColor("#0202ED")
+            ),
+
             PreferenceItem.Category(stringResource(R.string.dearrow)),
             PreferenceItem.Switch(
                 key = PreferenceKeys.DEARROW,
                 title = stringResource(R.string.enabled),
                 summary = stringResource(R.string.dearrow_summary),
-                defaultValue = false
+                defaultValue = true
             ),
             PreferenceItem.Switch(
                 key = PreferenceKeys.DEARROW_TITLES,
@@ -159,6 +222,12 @@ object SettingsRegistry {
                 key = PreferenceKeys.DEARROW_THUMBNAILS,
                 title = stringResource(R.string.dearrow_thumbnails),
                 summary = stringResource(R.string.dearrow_thumbnails_summary),
+                defaultValue = true
+            ),
+            PreferenceItem.Switch(
+                key = "dearrow_exempt_live",
+                title = stringResource(R.string.dearrow_exemption_live),
+                summary = stringResource(R.string.dearrow_exemption_live_summary),
                 defaultValue = true
             )
         )

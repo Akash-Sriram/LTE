@@ -22,7 +22,7 @@ object SafeInstantSerializer : KSerializer<Instant> {
         return try {
             Instant.parse(string)
         } catch (e: IllegalArgumentException) {
-            Log.e(TAG(), "Error parsing date '$string'", e)
+            // Error parsing date
             LocalDate.parse(string).atStartOfDayIn(TimeZone.currentSystemDefault())
         }
     }

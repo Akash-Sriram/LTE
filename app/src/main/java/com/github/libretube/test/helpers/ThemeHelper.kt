@@ -13,7 +13,6 @@ import androidx.core.text.HtmlCompat
 import androidx.core.text.parseAsHtml
 import com.github.libretube.test.R
 import com.github.libretube.test.constants.PreferenceKeys
-import com.github.libretube.test.ui.adapters.IconsSheetAdapter
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.MaterialColors
 
@@ -77,8 +76,12 @@ object ThemeHelper {
      */
     fun changeIcon(context: Context, newLogoActivityAlias: String) {
         // Disable Old Icon(s)
-        for (appIcon in IconsSheetAdapter.availableIcons) {
-            val activityClass = context.packageName.removeSuffix(".debug") + "." + appIcon.activityAlias
+        val availableIcons = listOf(
+            "Default", "IconGradient", "DefaultLight", "IconFire", 
+            "IconFlame", "IconShaped", "IconTorch", "IconLegacy", "IconBird"
+        )
+        for (alias in availableIcons) {
+            val activityClass = context.packageName.removeSuffix(".debug") + "." + alias
 
             // remove old icons
             context.packageManager.setComponentEnabledSetting(

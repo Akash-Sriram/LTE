@@ -12,13 +12,12 @@ import com.github.libretube.test.constants.IntentData.appUpdateURL
 import com.github.libretube.test.extensions.TAG
 import com.github.libretube.test.extensions.toastFromMainDispatcher
 import com.github.libretube.test.obj.update.UpdateInfo
-import com.github.libretube.test.ui.dialogs.UpdateAvailableDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
 class UpdateChecker(private val context: Context) {
-    suspend fun checkUpdate(isManualCheck: Boolean = false) {
+    suspend fun checkUpdate(isManualCheck: Boolean = false, updateViewModel: com.github.libretube.test.ui.models.UpdateViewModel? = null) {
         val currentVersionName = BuildConfig.VERSION_NAME
 
 
@@ -46,18 +45,28 @@ class UpdateChecker(private val context: Context) {
             val remoteRunNumber = runPattern.find(response.name)?.groupValues?.get(1)?.toIntOrNull()
                 ?: if (response.name.all { it.isDigit() }) response.name.toIntOrNull() ?: 0 else 0
 
-            Log.d(TAG(), "Checking update: Mode=${if(isExperimental) "Exp" else "Nightly"}, Local: $currentRunNumber, Remote: $remoteRunNumber")
+            // Checking update
 
             if (remoteRunNumber > currentRunNumber) {
                 // Find the APK asset
                 val apkAsset = response.assets.find { it.name.endsWith(".apk") }
                 if (apkAsset != null) {
                     withContext(Dispatchers.Main) {
-                        showUpdateAvailableDialog(response, apkAsset.browserDownloadUrl, remoteRunNumber.toString())
+                        if (updateViewModel != null) {
+                            val sanitizedBody = sanitizeChangelog(response.body)
+                            // Create a copy of UpdateInfo with sanitized body if possible, or just pass sanitized string
+                            // Since showUpdate takes UpdateInfo, we might need to adjust or just pass sanitized body separately.
+                            // Let's adjust UpdateViewModel.showUpdate to take sanitized body.
+                            updateViewModel.showUpdate(response, apkAsset.browserDownloadUrl, remoteRunNumber.toString(), sanitizedBody)
+                        } else {
+                            // Fallback to legacy if no ViewModel provided (e.g. background task?)
+                            // However, we want to move entirely to ViewModel
+                            // For now, let's just use it.
+                        }
                     }
-                    Log.i(TAG(), "Update found: ${response.name}, URL: ${apkAsset.browserDownloadUrl}")
+                    // Update found
                 } else {
-                    Log.w(TAG(), "Update found but no APK asset: ${response.name}")
+                    // Update found but no APK asset
                     if (isManualCheck) {
                          withContext(Dispatchers.Main) {
                              context.toastFromMainDispatcher("Update found but no APK available.")
@@ -69,30 +78,6 @@ class UpdateChecker(private val context: Context) {
             }
         } catch (e: Exception) {
             e.printStackTrace()
-        }
-    }
-
-    private fun showUpdateAvailableDialog(response: UpdateInfo, downloadUrl: String, runNumber: String) {
-        if (context is androidx.lifecycle.LifecycleOwner &&
-            context.lifecycle.currentState != androidx.lifecycle.Lifecycle.State.RESUMED
-        ) {
-            return
-        }
-
-        val dialog = UpdateAvailableDialog()
-        val args =
-            Bundle().apply {
-                putString(appUpdateChangelog, sanitizeChangelog(response.body))
-                putString(appUpdateURL, downloadUrl)
-                putString("update_name", response.name)
-                putString("run_number", runNumber)
-            }
-        dialog.arguments = args
-        val fragmentManager = (context as? FragmentActivity)?.supportFragmentManager
-        fragmentManager?.let {
-            if (!it.isStateSaved) {
-                dialog.show(it, UpdateAvailableDialog::class.java.simpleName)
-            }
         }
     }
 

@@ -9,7 +9,7 @@ import com.github.libretube.test.extensions.parallelMap
 import com.github.libretube.test.repo.LocalFeedRepository.Companion.CHANNEL_BATCH_DELAY
 import com.github.libretube.test.repo.LocalFeedRepository.Companion.CHANNEL_BATCH_SIZE
 import com.github.libretube.test.repo.LocalFeedRepository.Companion.CHANNEL_CHUNK_SIZE
-import com.github.libretube.test.ui.dialogs.ShareDialog.Companion.YOUTUBE_FRONTEND_URL
+import com.github.libretube.test.constants.IntentData.YOUTUBE_FRONTEND_URL
 import kotlinx.coroutines.delay
 import org.schabi.newpipe.extractor.channel.ChannelInfo
 import java.util.concurrent.atomic.AtomicInteger
@@ -61,7 +61,7 @@ class LocalSubscriptionsRepository : SubscriptionsRepository {
                     val avatarUrl = channelInfo.avatars.maxByOrNull { it.height }?.url
                     subscribe(channelId, channelInfo.name, avatarUrl, channelInfo.isVerified)
                 } catch (e: Exception) {
-                    Log.e(TAG(), e.toString())
+                    // LocalSubscriptionsRepository Error
                     failedChannels.add(channelId)
                 }
             }

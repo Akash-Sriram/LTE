@@ -21,7 +21,9 @@ fun PlayerSettingsSheet(
     onDismissRequest: () -> Unit,
     onQualityClick: () -> Unit,
     onCaptionsClick: () -> Unit,
-    onAudioTrackClick: () -> Unit
+    onAudioTrackClick: () -> Unit,
+    onSleepTimerClick: () -> Unit,
+    onStatsClick: () -> Unit
 ) {
     val playbackSpeed by viewModel.playbackSpeed.collectAsState()
     
@@ -70,6 +72,16 @@ fun PlayerSettingsSheet(
             ListItem(
                 headlineContent = { Text("Audio Tracks") },
                 modifier = Modifier.clickable { onAudioTrackClick() },
+                trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) }
+            )
+            ListItem(
+                headlineContent = { Text("Sleep Timer") },
+                modifier = Modifier.clickable { onSleepTimerClick() },
+                trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) }
+            )
+            ListItem(
+                headlineContent = { Text("Stats for nerds") },
+                modifier = Modifier.clickable { onStatsClick() },
                 trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) }
             )
         }

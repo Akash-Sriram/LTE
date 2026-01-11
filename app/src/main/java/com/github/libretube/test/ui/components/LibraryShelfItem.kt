@@ -2,6 +2,7 @@ package com.github.libretube.test.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -19,17 +20,23 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.github.libretube.test.R
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun LibraryShelfItem(
     state: PlaylistCardState,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Card(
-        onClick = onClick,
         modifier = modifier
             .width(160.dp)
-            .padding(4.dp),
+            .padding(4.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)

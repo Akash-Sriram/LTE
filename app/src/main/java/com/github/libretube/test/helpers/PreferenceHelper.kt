@@ -141,7 +141,7 @@ object PreferenceHelper {
         // One-time migration: Import SharedPreferences to DB if DB is empty
         val sp = getDefaultSharedPreferences(context)
         if (dataStore.getAll().isEmpty() && sp.all.isNotEmpty()) {
-            Log.d(TAG, "Migrating SharedPreferences to Database...")
+            // Migrating SharedPreferences to Database
             sp.all.forEach { (key, value) ->
                 when (value) {
                     is String -> putString(key, value)
@@ -169,7 +169,7 @@ object PreferenceHelper {
 
             val migration =
                 MIGRATIONS.find { it.fromVersion == currentPrefVersion && it.toVersion == next }
-            Log.i(TAG, "Performing migration from $currentPrefVersion to $next")
+            // Performing migration
             migration?.onMigration?.invoke()
 
             currentPrefVersion++

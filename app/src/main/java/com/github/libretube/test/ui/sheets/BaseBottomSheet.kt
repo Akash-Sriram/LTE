@@ -10,62 +10,53 @@ import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.github.libretube.test.R
-import com.github.libretube.test.databinding.BottomSheetBinding
-import com.github.libretube.test.extensions.dpToPx
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import com.github.libretube.test.obj.BottomSheetItem
-import com.github.libretube.test.ui.adapters.BottomSheetAdapter
+import com.github.libretube.test.ui.theme.LibreTubeTheme
 import kotlinx.coroutines.launch
 import com.github.libretube.test.ui.extensions.onSystemInsets
 
 
-open class BaseBottomSheet(@LayoutRes layoutResId: Int = R.layout.bottom_sheet) : ExpandedBottomSheet(layoutResId) {
+open class BaseBottomSheet : ExpandedBottomSheet(0) {
 
     private var title: String? = null
     private var preselectedItem: String? = null
     private lateinit var items: List<BottomSheetItem>
     private lateinit var listener: (index: Int) -> Unit
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        val binding = BottomSheetBinding.bind(view)
-
-        if (title != null) {
-            binding.bottomSheetTitleLayout.isVisible = true
-
-            binding.bottomSheetTitle.text = title
-            binding.bottomSheetTitle.textSize = titleTextSize
-            binding.bottomSheetTitle.updateLayoutParams<MarginLayoutParams> {
-                marginStart = titleMargin
-                marginEnd = titleMargin
+    override fun onCreateView(
+        inflater: android.view.LayoutInflater,
+        container: android.view.ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        return ComposeView(requireContext()).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                LibreTubeTheme {
+                    GenericBottomSheetScreen(
+                        title = title,
+                        items = items,
+                        onItemClick = { index ->
+                            listener(index)
+                        }
+                    )
+                }
             }
         }
+    }
 
-        // set the selected item
-        for (item in items) {
-            Log.e(item.title, preselectedItem.toString())
-        }
-        for (item in items.filter { it.title == preselectedItem }) {
-            item.title = "${item.title} ✓"
-        }
-        binding.optionsRecycler.layoutManager = LinearLayoutManager(requireContext())
-        binding.optionsRecycler.adapter = BottomSheetAdapter(items, listener)
-
-        // add bottom padding to the list, to ensure that the last item is not overlapped by the system bars
-        binding.optionsRecycler.onSystemInsets { v, systemInsets ->
-            v.setPadding(
-                v.paddingLeft,
-                v.paddingTop,
-                v.paddingRight,
-                systemInsets.bottom
-            )
-        }
-
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        // No-op - content is in ComposeView
     }
 
     fun setItems(items: List<BottomSheetItem>, listener: (suspend (index: Int) -> Unit)?) = apply {
         this.items = items
         this.listener = { index ->
             lifecycleScope.launch {
+                val item = items[index]
                 dialog?.hide()
+                item.onClick()
                 listener?.invoke(index)
                 runCatching {
                     dismiss()
@@ -88,8 +79,7 @@ open class BaseBottomSheet(@LayoutRes layoutResId: Int = R.layout.bottom_sheet) 
     }
 
     companion object {
-        private val titleTextSize = 7f.dpToPx().toFloat()
-        private val titleMargin = 24f.dpToPx()
+        // Removed legacy constants
     }
 }
 

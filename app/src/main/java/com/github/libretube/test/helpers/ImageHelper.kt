@@ -108,7 +108,7 @@ object ImageHelper {
         target.setImageBitmap(null)
 
         val urlToLoad = url
-        android.util.Log.d("ImageHelper", "Loading image from URL: $urlToLoad")
+        // Loading image
 
         // only load online images if the data saver mode is disabled
         if (DataSaverMode.isEnabled(target.context)) {
@@ -124,14 +124,14 @@ object ImageHelper {
                 onError = { _, result ->
                     // Fallback logic for DeArrow thumbnails
                     if (urlToLoad.contains("dearrow-thumb.ajay.app")) {
-                        android.util.Log.w("ImageHelper", "DeArrow thumbnail failed (likely 204): $urlToLoad, falling back...")
+                        // DeArrow thumbnail failed
                          // Extract video ID from DeArrow URL
                          val regex = Regex("(?:videoID=)([a-zA-Z0-9_-]{11})")
                          val videoId = regex.find(urlToLoad)?.groupValues?.get(1)
                          
                          if (videoId != null) {
                              val fallbackUrl = "https://i.ytimg.com/vi/$videoId/mq2.jpg"
-                             android.util.Log.d("ImageHelper", "Falling back to original thumbnail: $fallbackUrl")
+                             // Fallback to original thumbnail
                              // Recursively load the fallback URL
                              // using target.post to avoid state issues during callback
                              target.post {
@@ -139,7 +139,7 @@ object ImageHelper {
                              }
                          }
                     } else {
-                        android.util.Log.e("ImageHelper", "Failed to load image: $urlToLoad, reason: ${result.throwable.message}")
+                        // Failed to load image
                     }
                 }
             )
@@ -156,13 +156,13 @@ object ImageHelper {
              
              if (videoId != null) {
                  val fallbackUrl = "https://i.ytimg.com/vi/$videoId/mq2.jpg"
-                 android.util.Log.w("ImageHelper", "DeArrow failed. Falling back to original thumbnail: $fallbackUrl")
+                 // DeArrow failed. Falling back
                  bitmap = getImage(context, fallbackUrl)
              }
         }
 
         if (bitmap == null) {
-            android.util.Log.e("ImageHelper", "Failed to download bitmap for: $url (and fallback failed)")
+            // Failed to download bitmap
             return
         }
         
@@ -176,9 +176,9 @@ object ImageHelper {
                 java.io.FileOutputStream(file).use { out ->
                     finalBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                 }
-                android.util.Log.d("ImageHelper", "Thumbnail saved successfully to: $path")
+                // Thumbnail saved successfully
             } catch (e: Exception) {
-                android.util.Log.e("ImageHelper", "Failed to save thumbnail to disk: $path", e)
+                // Failed to save thumbnail to disk
                 throw e
             }
         }
@@ -203,7 +203,7 @@ object ImageHelper {
 
             if (videoId != null) {
                 val fallbackUrl = "https://i.ytimg.com/vi/$videoId/mq2.jpg"
-                android.util.Log.w("ImageHelper", "getImage: DeArrow failed for $urlString. Falling back to: $fallbackUrl")
+                // DeArrow failed
                 bitmap = getImage(context, fallbackUrl.toUri())
             }
         }

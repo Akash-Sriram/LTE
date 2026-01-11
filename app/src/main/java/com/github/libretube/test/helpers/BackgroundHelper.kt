@@ -17,8 +17,7 @@ import com.github.libretube.test.services.OfflinePlayerService
 import com.github.libretube.test.services.OnlinePlayerService
 import com.github.libretube.test.ui.activities.MainActivity
 import com.github.libretube.test.ui.activities.NoInternetActivity
-import com.github.libretube.test.ui.fragments.DownloadTab
-import com.github.libretube.test.ui.fragments.PlayerFragment
+import com.github.libretube.test.enums.DownloadTab
 import com.google.common.util.concurrent.MoreExecutors
 
 /**
@@ -38,11 +37,12 @@ object BackgroundHelper {
         keepQueue: Boolean = false,
     ) {
         // close the previous video player if open
-        val fragmentManager =
-            ContextHelper.unwrapActivity<MainActivity>(context).supportFragmentManager
-        fragmentManager.fragments.firstOrNull { it is PlayerFragment }?.let {
-            fragmentManager.commit { remove(it) }
-        }
+        // TODO: Handle Compose player minimization/closing if needed
+        // val fragmentManager =
+        //     ContextHelper.unwrapActivity<MainActivity>(context).supportFragmentManager
+        // fragmentManager.fragments.firstOrNull { it is PlayerFragment }?.let {
+        //     fragmentManager.commit { remove(it) }
+        // }
 
         val playerData = PlayerData(videoId, playlistId, channelId, keepQueue, position)
 

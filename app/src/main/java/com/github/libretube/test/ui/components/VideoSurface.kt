@@ -37,7 +37,7 @@ fun VideoSurface(
             },
             update = { view ->
                 if (playerController != null && view.player != playerController) {
-                    android.util.Log.d("PlayerScreen", "Attaching player to view: $playerController")
+                    // Attaching player to view
                     view.player = playerController
                 }
             },

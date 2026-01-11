@@ -141,7 +141,7 @@ open class OnlinePlayerService : AbstractPlayerService() {
                 try {
                     MediaServiceRepository.instance.getStreams(videoId)
                 }  catch (e: Exception) {
-                    Log.e(TAG(), e.stackTraceToString())
+                    // OnlinePlayerService Error
                     toastFromMainDispatcher(e.localizedMessage.orEmpty())
                     return@withContext null
                 }

@@ -33,7 +33,7 @@ object NavBarHelper {
         val prefItems = try {
             getNavBarPrefs()
         } catch (e: Exception) {
-            Log.e("fail to parse nav items", e.toString())
+            // fail to parse nav items
             return getDefaultNavBarItems(context)
         }
         val p = PopupMenu(context, null)

@@ -77,7 +77,7 @@ class NotificationWorker(appContext: Context, parameters: WorkerParameters) :
      * check whether new streams are available in subscriptions
      */
     private suspend fun checkForNewStreams(): Boolean {
-        Log.d(TAG(), "Work manager started")
+        // Work manager started
 
         // fetch the users feed
         val videoFeed = try {
@@ -113,7 +113,7 @@ class NotificationWorker(appContext: Context, parameters: WorkerParameters) :
         // return if the previous video didn't get found or all the channels have notifications disabled
         if (channelGroups.isEmpty()) return true
 
-        Log.d(TAG(), "Create notifications for new videos")
+        // Create notifications for new videos
 
         // create a notification for each new stream
         channelGroups.forEach { (channelId, streams) ->

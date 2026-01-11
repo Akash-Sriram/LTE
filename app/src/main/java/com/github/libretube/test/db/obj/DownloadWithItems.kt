@@ -3,7 +3,7 @@ package com.github.libretube.test.db.obj
 import androidx.room.Embedded
 import androidx.room.Relation
 import com.github.libretube.test.enums.FileType
-import com.github.libretube.test.ui.fragments.DownloadTab
+import com.github.libretube.test.enums.DownloadTab
 
 data class DownloadWithItems(
     @Embedded val download: Download,

@@ -65,6 +65,9 @@ fun ChannelScreen(
         mutableStateOf(PreferenceHelper.getBoolean(PreferenceKeys.NOTIFICATION_ENABLED, true))
     }
     
+    var showOptions by remember { mutableStateOf(false) }
+    var showAddChannelToGroup by remember { mutableStateOf(false) }
+    
     // Check subscription status
     LaunchedEffect(channelData?.id) {
         channelData?.id?.let { channelId ->
@@ -104,7 +107,7 @@ fun ChannelScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onShowOptions) {
+                    IconButton(onClick = { showOptions = true }) {
                         Icon(Icons.Default.MoreVert, contentDescription = "Options")
                     }
                 },
@@ -203,6 +206,39 @@ fun ChannelScreen(
                 }
             }
         }
+    }
+
+    if (showOptions && channelData != null) {
+        com.github.libretube.test.ui.sheets.ChannelOptionsSheet(
+            channelId = channelData.id!!,
+            channelName = channelData.name,
+            isSubscribed = isSubscribed,
+            onDismissRequest = { showOptions = false },
+            onShareClick = {
+                // TODO: Share
+            },
+            onAddToGroupClick = {
+                showOptions = false
+                showAddChannelToGroup = true
+            },
+            onPlayLatestClick = {
+                channelData.relatedStreams.firstOrNull()?.url?.let {
+                    com.github.libretube.test.helpers.NavigationHelper.navigateVideo(context, it)
+                }
+            },
+            onPlayBackgroundClick = {
+                channelData.relatedStreams.firstOrNull()?.url?.let {
+                    com.github.libretube.test.helpers.BackgroundHelper.playOnBackground(context, it)
+                }
+            }
+        )
+    }
+
+    if (showAddChannelToGroup && channelData != null) {
+        com.github.libretube.test.ui.sheets.AddChannelToGroupSheet(
+            channelId = channelData.id!!,
+            onDismissRequest = { showAddChannelToGroup = false }
+        )
     }
 }
 

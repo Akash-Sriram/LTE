@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -23,6 +24,9 @@ import com.github.libretube.test.ui.components.ShimmerVideoRow
 import com.github.libretube.test.ui.components.VideoCard
 import com.github.libretube.test.ui.components.VideoCardState
 import com.github.libretube.test.ui.theme.LibreTubeTheme
+import androidx.compose.runtime.livedata.observeAsState
+import com.github.libretube.test.extensions.toID
+import com.github.libretube.test.extensions.formatShort
 
 data class HomeScreenState(
     val featured: List<VideoCardState>? = null,
@@ -38,6 +42,110 @@ data class HomeScreenState(
 
 @Composable
 fun HomeScreen(
+    navController: androidx.navigation.NavController,
+    homeViewModel: com.github.libretube.test.ui.models.HomeViewModel,
+    subscriptionsViewModel: com.github.libretube.test.ui.models.SubscriptionsViewModel
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val trending by homeViewModel.trending.observeAsState()
+    val feed by homeViewModel.feed.observeAsState()
+    val bookmarks by homeViewModel.bookmarks.observeAsState()
+    val playlists by homeViewModel.playlists.observeAsState()
+    val continueWatching by homeViewModel.continueWatching.observeAsState()
+    val isLoading by homeViewModel.isLoading.observeAsState(true)
+
+    // Load feed on entry if needed
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                 val defaultItems = context.resources.getStringArray(R.array.homeTabItemsValues)
+                 val visibleItems = com.github.libretube.test.helpers.PreferenceHelper.getStringSet(
+                     com.github.libretube.test.constants.PreferenceKeys.HOME_TAB_CONTENT, 
+                     defaultItems.toSet()
+                 )
+                 
+                 homeViewModel.loadHomeFeed(
+                    context = context,
+                    subscriptionsViewModel = subscriptionsViewModel,
+                    visibleItems = visibleItems,
+                    onUnusualLoadTime = {}
+                 )
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+    
+    val state = HomeScreenState(
+        featured = feed?.map { it.toVideoCardState() },
+        continueWatching = continueWatching?.map { it.toVideoCardState() },
+        trending = trending?.second?.streams?.take(10)?.map { it.toVideoCardState() },
+        bookmarks = bookmarks?.map { it.toPlaylistCardState() },
+        playlists = playlists?.map { it.toPlaylistCardState() },
+        isLoading = isLoading,
+        isRefreshing = isLoading && (feed != null || trending != null),
+        trendingCategory = trending?.first?.name,
+        trendingRegionName = com.github.libretube.test.helpers.PreferenceHelper.getTrendingRegion(context)
+    )
+
+    HomeContent(
+        state = state,
+        onVideoClick = { videoId ->
+            com.github.libretube.test.helpers.NavigationHelper.navigateVideo(context, videoId)
+        },
+        onPlaylistClick = { playlistId ->
+            com.github.libretube.test.helpers.NavigationHelper.navigatePlaylist(context, playlistId, com.github.libretube.test.enums.PlaylistType.PUBLIC)
+        },
+        onSectionClick = { section ->
+            when (section) {
+                "featured" -> navController.navigate(com.github.libretube.test.ui.navigation.Routes.Subscriptions)
+                "watching" -> navController.navigate(com.github.libretube.test.ui.navigation.Routes.WatchHistory)
+                "trending" -> navController.navigate(com.github.libretube.test.ui.navigation.Routes.Trends)
+                "playlists" -> navController.navigate(
+                    com.github.libretube.test.ui.navigation.Routes.libraryListing(com.github.libretube.test.ui.screens.LibraryListingType.PLAYLISTS.name)
+                )
+                "bookmarks" -> navController.navigate(
+                    com.github.libretube.test.ui.navigation.Routes.libraryListing(com.github.libretube.test.ui.screens.LibraryListingType.BOOKMARKS.name)
+                )
+            }
+        },
+        onTrendingCategoryClick = { /* Show Dialog - TODO: Implement Composable Dialog */ },
+        onTrendingRegionClick = { /* Show Dialog - TODO */ }
+    )
+}
+
+// Extension functions helper (copied from HomeFragment)
+private fun com.github.libretube.test.api.obj.StreamItem.toVideoCardState() = VideoCardState(
+    videoId = url?.toID() ?: "",
+    title = title ?: "",
+    uploaderName = uploaderName ?: "",
+    views = views?.formatShort() ?: "",
+    duration = duration?.let { android.text.format.DateUtils.formatElapsedTime(it) } ?: "",
+    thumbnailUrl = thumbnail,
+    uploaderAvatarUrl = uploaderAvatar
+)
+
+private fun com.github.libretube.test.db.obj.PlaylistBookmark.toPlaylistCardState() = PlaylistCardState(
+    playlistId = playlistId,
+    title = playlistName ?: "",
+    description = uploader ?: "",
+    videoCount = videos.toLong(),
+    thumbnailUrl = thumbnailUrl ?: ""
+)
+
+private fun com.github.libretube.test.api.obj.Playlists.toPlaylistCardState() = PlaylistCardState(
+    playlistId = id ?: "",
+    title = name ?: "",
+    description = shortDescription ?: "",
+    videoCount = videos,
+    thumbnailUrl = thumbnail ?: ""
+)
+
+@Composable
+fun HomeContent(
     state: HomeScreenState,
     onVideoClick: (String) -> Unit,
     onPlaylistClick: (String) -> Unit,
@@ -210,7 +318,7 @@ fun HomeHorizontalPlaylistList(
 @Composable
 fun HomeScreenPreview() {
     LibreTubeTheme {
-        HomeScreen(
+        HomeContent(
             state = HomeScreenState(
                 featured = listOf(
                     VideoCardState("1", "Hello World", "Channel", "1M views", "10:00", null, null)

@@ -34,6 +34,9 @@ import coil3.compose.AsyncImage
 import com.github.libretube.test.R
 import com.github.libretube.test.ui.theme.LibreTubeTheme
 
+import androidx.compose.runtime.Immutable
+
+@Immutable
 data class VideoCardState(
     val videoId: String,
     val title: String,
@@ -74,7 +77,7 @@ fun VideoCard(
                 .background(Color.Black) // Placeholder
         ) {
             AsyncImage(
-                model = state.thumbnailUrl,
+                model = com.github.libretube.test.util.rememberContentWithCrossfade(state.thumbnailUrl),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.matchParentSize()
@@ -140,7 +143,7 @@ fun VideoCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (state.uploaderAvatarUrl != null) {
                     AsyncImage(
-                        model = state.uploaderAvatarUrl,
+                        model = com.github.libretube.test.util.rememberContentWithCrossfade(state.uploaderAvatarUrl),
                         contentDescription = null,
                         modifier = Modifier
                             .size(24.dp)

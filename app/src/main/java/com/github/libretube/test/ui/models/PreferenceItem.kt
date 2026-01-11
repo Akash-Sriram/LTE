@@ -41,4 +41,11 @@ sealed class PreferenceItem {
         override val key: String? = null,
         val content: @Composable () -> Unit
     ) : PreferenceItem()
+
+    data class Color(
+        override val title: String,
+        override val summary: String? = null,
+        override val key: String,
+        val defaultValue: Int = android.graphics.Color.WHITE
+    ) : PreferenceItem()
 }

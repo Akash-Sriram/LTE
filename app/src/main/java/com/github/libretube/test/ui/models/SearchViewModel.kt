@@ -43,7 +43,7 @@ class SearchViewModel : ViewModel() {
                         }
                         emit(suggestions)
                     } catch (e: Exception) {
-                        Log.e("SearchViewModel", "failed to fetch suggestions", e)
+                        // failed to fetch suggestions
                         emit(emptyList<String>())
                     }
                 } else {

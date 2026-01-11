@@ -29,6 +29,9 @@ import coil3.compose.AsyncImage
 import com.github.libretube.test.R
 import com.github.libretube.test.ui.theme.LibreTubeTheme
 
+import androidx.compose.runtime.Immutable
+
+@Immutable
 data class QueueRowState(
     val videoId: String,
     val title: String,
@@ -52,7 +55,7 @@ fun QueueRow(
     ) {
         // Thumbnail
         AsyncImage(
-            model = state.thumbnailUrl,
+            model = com.github.libretube.test.util.rememberContentWithCrossfade(state.thumbnailUrl),
             contentDescription = null,
             modifier = Modifier
                 .width(80.dp)

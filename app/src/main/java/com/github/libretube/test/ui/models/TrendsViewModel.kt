@@ -38,7 +38,7 @@ class TrendsViewModel : ViewModel() {
                 }
                 setStreamsForCategory(category, TrendingStreams(region, response))
             } catch (e: Exception) {
-                Log.e(TAG(), e.stackTraceToString())
+                // Error fetching trends
                 context.toastFromMainDispatcher(e.localizedMessage.orEmpty())
             }
         }

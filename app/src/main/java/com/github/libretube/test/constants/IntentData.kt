@@ -67,5 +67,8 @@ object IntentData {
     const val backupDatabase = "backupDatabase"
     const val requestSort = "requestSort"
     const val requestReorder = "requestReorder"
+    
+    const val YOUTUBE_FRONTEND_URL = "https://www.youtube.com"
+    const val YOUTUBE_SHORT_URL = "https://youtu.be"
 }
 

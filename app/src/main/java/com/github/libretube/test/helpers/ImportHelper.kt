@@ -22,7 +22,7 @@ import com.github.libretube.test.obj.FreetubeSubscriptions
 import com.github.libretube.test.obj.NewPipeSubscription
 import com.github.libretube.test.obj.NewPipeSubscriptions
 import com.github.libretube.test.obj.YouTubeWatchHistoryFileItem
-import com.github.libretube.test.ui.dialogs.ShareDialog.Companion.YOUTUBE_FRONTEND_URL
+import com.github.libretube.test.constants.IntentData.YOUTUBE_FRONTEND_URL
 import com.github.libretube.test.util.TextUtils
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.encodeToString
@@ -51,12 +51,12 @@ object ImportHelper {
             SubscriptionHelper.importSubscriptions(getChannelsFromUri(context, uri, importFormat))
             context.toastFromMainDispatcher(R.string.importsuccess)
         } catch (e: IllegalArgumentException) {
-            Log.e(TAG(), e.toString())
+            // ImportHelper Error
             val type = context.contentResolver.getType(uri)
             val message = context.getString(R.string.unsupported_file_format, type)
             context.toastFromMainDispatcher(message)
         } catch (e: Exception) {
-            Log.e(TAG(), e.toString())
+            // ImportHelper Error
             e.localizedMessage?.let {
                 context.toastFromMainDispatcher(it)
             }
@@ -244,7 +244,7 @@ object ImportHelper {
             PlaylistsHelper.importPlaylists(importPlaylists)
             context.toastFromMainDispatcher(R.string.success)
         } catch (e: Exception) {
-            Log.e(TAG(), e.toString())
+            // ImportHelper Error
             e.localizedMessage?.let {
                 context.toastFromMainDispatcher(it)
             }

@@ -15,10 +15,13 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import com.github.libretube.test.extensions.toID
+import com.github.libretube.test.obj.VideoStats
 import com.github.libretube.test.ui.models.PlayerViewModel
 import kotlinx.coroutines.launch
 
 import com.github.libretube.test.ui.components.VideoSurface
+import com.github.libretube.test.ui.components.DraggablePlayerPanel
 import com.github.libretube.test.ui.components.DraggablePlayerPanel
 import com.github.libretube.test.ui.sheets.QueueSheet
 import com.github.libretube.test.ui.sheets.ChaptersSheet
@@ -26,6 +29,7 @@ import com.github.libretube.test.ui.sheets.PlayerSettingsSheet
 import com.github.libretube.test.ui.sheets.QualitySelectionSheet
 import com.github.libretube.test.ui.sheets.SubtitleSelectionSheet
 import com.github.libretube.test.ui.sheets.AudioTrackSelectionSheet
+import com.github.libretube.test.ui.sheets.VideoOptionsSheet
 
 enum class PlayerState {
     Collapsed,
@@ -95,13 +99,17 @@ fun PlayerScreen(
     ) {
         val queue by playerViewModel.queue.collectAsState()
         val chapters by playerViewModel.chapters.collectAsState()
+        val currentStream by playerViewModel.currentStream.collectAsState()
         
         var showQueue by remember { mutableStateOf(false) }
         var showChapters by remember { mutableStateOf(false) }
         var showSettings by remember { mutableStateOf(false) }
         var showQuality by remember { mutableStateOf(false) }
         var showCaptions by remember { mutableStateOf(false) }
+        var showSleepTimer by remember { mutableStateOf(false) }
+        var showStats by remember { mutableStateOf(false) }
         var showAudioTracks by remember { mutableStateOf(false) }
+        var showVideoOptions by remember { mutableStateOf(false) }
 
         DraggablePlayerPanel(
             state = draggableState,
@@ -110,7 +118,9 @@ fun PlayerScreen(
             videoSurface = movableVideoSurface,
             onQueueClick = { showQueue = true },
             onChaptersClick = { showChapters = true },
-            onSettingsClick = { showSettings = true }
+
+            onSettingsClick = { showSettings = true },
+            onVideoOptionsClick = { showVideoOptions = true }
         )
 
         if (showQueue) {
@@ -150,7 +160,55 @@ fun PlayerScreen(
                 onAudioTrackClick = {
                     showSettings = false
                     showAudioTracks = true
+                },
+                onSleepTimerClick = {
+                    showSettings = false
+                    showSleepTimer = true
+                },
+                onStatsClick = {
+                    showSettings = false
+                    showStats = true
                 }
+            )
+        }
+
+        if (showVideoOptions) {
+            val currentStreamItem = currentStream
+            if (currentStreamItem != null) {
+                com.github.libretube.test.ui.sheets.VideoOptionsSheet(
+                    streamItem = currentStreamItem,
+                    onDismissRequest = { showVideoOptions = false },
+                    onShareClick = {
+                        showVideoOptions = false
+                        playerViewModel.triggerPlayerCommand(com.github.libretube.test.ui.models.PlayerCommandEvent.Share)
+                    },
+                    onDownloadClick = {
+                        showVideoOptions = false
+                        playerViewModel.triggerPlayerCommand(com.github.libretube.test.ui.models.PlayerCommandEvent.Download)
+                    }
+                )
+            }
+        }
+
+        if (showSleepTimer) {
+             com.github.libretube.test.ui.sheets.SleepTimerSheetCompose(
+                 onDismiss = { showSleepTimer = false }
+             )
+        }
+
+        if (showStats) {
+            val currentStream by playerViewModel.currentStream.collectAsState()
+            val stats = remember(currentStream) {
+                VideoStats(
+                    videoId = currentStream?.url?.toID() ?: "Unknown",
+                    videoInfo = "ExoPlayer (Hardware)",
+                    videoQuality = "Auto (Adaptive)",
+                    audioInfo = "AAC / Opus"
+                )
+            }
+            com.github.libretube.test.ui.sheets.StatsSheetCompose(
+                stats = stats,
+                onDismiss = { showStats = false }
             )
         }
 

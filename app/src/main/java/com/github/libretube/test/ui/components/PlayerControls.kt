@@ -19,21 +19,14 @@ fun PlayerControls(
     modifier: Modifier = Modifier,
     onQueueClick: () -> Unit,
     onChaptersClick: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    onVideoOptionsClick: () -> Unit
 ) {
     val isPlaying by viewModel.isPlaying.collectAsState()
-    val currentPosition by viewModel.currentPosition.collectAsState()
-    val duration by viewModel.duration.collectAsState()
     val title by viewModel.title.collectAsState()
     val uploader by viewModel.uploader.collectAsState()
     val chapters by viewModel.chapters.collectAsState()
-    
-    // Local state for seeking to ensure smooth slider movement
-    var isSeeking by remember { mutableStateOf(false) }
-    var seekPosition by remember { mutableFloatStateOf(0f) }
 
-    val sliderPosition = if (isSeeking) seekPosition else currentPosition.toFloat()
-    val sliderDuration = duration.toFloat().coerceAtLeast(1f)
 
     Column(
         modifier = modifier
@@ -102,34 +95,17 @@ fun PlayerControls(
                          Icon(Icons.Default.Menu, contentDescription = "Chapters", tint = Color.White)
                      }
                  }
+
+                 IconButton(onClick = onVideoOptionsClick) {
+                     Icon(Icons.Default.MoreVert, contentDescription = "More", tint = Color.White)
+                 }
              }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(formatDuration(sliderPosition.toLong()), color = Color.White, style = MaterialTheme.typography.bodySmall)
-                Text(formatDuration(duration), color = Color.White, style = MaterialTheme.typography.bodySmall)
-            }
-            Slider(
-                value = sliderPosition,
-                onValueChange = { 
-                    isSeeking = true
-                    seekPosition = it
-                },
-                onValueChangeFinished = {
-                    isSeeking = false
-                    viewModel.seekTo(seekPosition.toLong())
-                },
-                valueRange = 0f..sliderDuration,
-                colors = SliderDefaults.colors(
-                    thumbColor = MaterialTheme.colorScheme.primary,
-                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                    inactiveTrackColor = Color.LightGray.copy(alpha = 0.5f)
-                )
-            )
+            PlayerProgressSection(viewModel = viewModel)
         }
     }
 }
+
+// formatDuration moved to DurationFormatter.kt
 
 

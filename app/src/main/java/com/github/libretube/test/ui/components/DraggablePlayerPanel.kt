@@ -31,7 +31,8 @@ fun DraggablePlayerPanel(
     videoSurface: @Composable (Modifier) -> Unit,
     onQueueClick: () -> Unit,
     onChaptersClick: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    onVideoOptionsClick: () -> Unit
 ) {
     val offset = state.requireOffset()
     val maxOffset = state.anchors.positionOf(PlayerState.Collapsed)
@@ -119,7 +120,8 @@ fun DraggablePlayerPanel(
             alpha = (1f - progress * 2f).coerceIn(0f, 1f), // Fade out faster
             onQueueClick = onQueueClick,
             onChaptersClick = onChaptersClick,
-            onSettingsClick = onSettingsClick
+            onSettingsClick = onSettingsClick,
+            onVideoOptionsClick = onVideoOptionsClick
         )
     }
 }

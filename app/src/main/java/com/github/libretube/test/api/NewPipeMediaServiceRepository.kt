@@ -29,7 +29,7 @@ import com.github.libretube.test.extensions.sha256Sum
 import com.github.libretube.test.extensions.toID
 import com.github.libretube.test.helpers.NewPipeExtractorInstance
 import com.github.libretube.test.helpers.PlayerHelper
-import com.github.libretube.test.ui.dialogs.ShareDialog.Companion.YOUTUBE_FRONTEND_URL
+import com.github.libretube.test.constants.IntentData.YOUTUBE_FRONTEND_URL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
@@ -367,7 +367,7 @@ class NewPipeMediaServiceRepository : MediaServiceRepository {
         val response = try {
             RetrofitInstance.externalApi.getDeArrowContent(videoId)
         } catch (e: Exception) {
-            android.util.Log.e("DeArrowUtil", "Network error for $videoId: ${e.message}")
+            // Network error
             return null
         }
 
@@ -379,12 +379,12 @@ class NewPipeMediaServiceRepository : MediaServiceRepository {
                 try {
                     JsonHelper.json.decodeFromString<DeArrowContent>(errorJson)
                 } catch (e: Exception) {
-                    android.util.Log.e("DeArrowUtil", "Could not parse 404 body for $videoId", e)
+                    // Could not parse 404 body
                     null
                 }
             }
         } else {
-            android.util.Log.e("DeArrowUtil", "API error for $videoId: ${response.code()}")
+            // API error
             return null
         }
     }
@@ -400,7 +400,7 @@ class NewPipeMediaServiceRepository : MediaServiceRepository {
         val response = RetrofitInstance.externalApi.submitDeArrow(body)
         if (!response.isSuccessful) {
             val errorBody = response.errorBody()?.string()
-            android.util.Log.e("NewPipeRepo", "DeArrow submission failed: ${response.code()} ${response.message()}, Body: $errorBody")
+            // DeArrow submission failed
             throw Exception("DeArrow submission failed: ${response.code()} $errorBody")
         }
     }
@@ -414,7 +414,7 @@ class NewPipeMediaServiceRepository : MediaServiceRepository {
         try {
             val response = RetrofitInstance.externalApi.voteOnBranding(uuid, userId, type)
             if (!response.isSuccessful) {
-                android.util.Log.e("NewPipeRepo", "DeArrow vote failed: ${response.code()} ${response.message()}")
+                // DeArrow vote failed
             }
         } catch (e: Exception) {
             android.util.Log.e("NewPipeRepo", "DeArrow vote exception", e)

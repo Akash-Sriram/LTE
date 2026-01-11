@@ -10,6 +10,8 @@ import com.github.libretube.test.helpers.PlayerHelper
 import com.github.libretube.test.extensions.toID
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import com.github.libretube.test.api.MediaServiceRepository
 import androidx.media3.session.MediaController
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -281,6 +283,37 @@ class PlayerViewModel : ViewModel() {
     var currentSubtitle = Subtitle(code = PlayerHelper.defaultSubtitleCode)
     var sponsorBlockConfig = PlayerHelper.getSponsorBlockCategories()
 
+    fun loadVideo(
+        videoId: String,
+        playlistId: String? = null,
+        channelId: String? = null,
+        timestamp: Long = 0,
+        playWhenReady: Boolean = true
+    ) {
+        // Fetch or create a placeholder StreamItem to update the UI immediately
+        // In a real scenario, we might want to fetch details here or rely on the player to load it.
+        // For now, valid playback requires a StreamItem in currentStream.
+        // If we don't have it, we might rely on the PlayerScreen to show loading.
+        
+        // This is a simplified implementation. The actual loading happens via MediaController/Service.
+        // But we update the internal state to reflect "loading" or "new video".
+        
+        // If we are coming from NavigationHelper, it calls this.
+        // We should ensure `currentStream` is updated if we have data, or set to loading.
+        viewModelScope.launch {
+           try {
+                val streams = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                   MediaServiceRepository.instance.getStreams(videoId)
+                }
+                setStream(streams.toStreamItem(videoId))
+               // The Player (ExoPlayer) loading is handled by MediaController connected to Service.
+               // We might explicitly tell the controller to play if needed, but usually the Service handles it via intent.
+           } catch (e: Exception) {
+               // Handle error
+           }
+        }
+    }
+
     /**
      * Whether an orientation change is in progress, so that the current player should be continued to use
      *
@@ -295,22 +328,91 @@ class PlayerViewModel : ViewModel() {
              deArrowData.postValue(null)
              return
         }
-        android.util.Log.d("DeArrowPlayer", "fetchDeArrowData called for $videoId")
+
         
         viewModelScope.launch {
             try {
-                android.util.Log.d("DeArrowPlayer", "Fetching DeArrow data for $videoId")
+
                 val response = com.github.libretube.test.api.MediaServiceRepository.instance.getDeArrowContent(videoId)
                 if (response != null && (response.titles.isNotEmpty() || response.thumbnails.isNotEmpty())) {
-                    android.util.Log.d("DeArrowPlayer", "SUCCESS: Received DeArrow data for $videoId. Titles: ${response.titles.size}, Thumbs: ${response.thumbnails.size}")
+
                 } else {
-                    android.util.Log.d("DeArrowPlayer", "NO DATA: No DeArrow curation for $videoId")
+
                 }
                 deArrowData.postValue(response)
             } catch (e: Exception) {
-                android.util.Log.e("DeArrowPlayer", "ERROR: Could not fetch DeArrow data for $videoId", e)
+                // Error fetching DeArrow data
                 deArrowData.postValue(null)
             }
         }
+    }
+
+    fun sortQueue(index: Int) {
+        val streams = PlayingQueue.getStreams()
+        val currentIndex = PlayingQueue.currentIndex()
+        val newQueue = when (index) {
+            0 -> streams.sortedBy { it.uploaded }
+            1 -> streams.sortedBy { it.views }.reversed()
+            2 -> streams.sortedBy { it.uploaderName }
+            3 -> {
+                // save all streams that need to be shuffled to a copy of the list
+                val toShuffle = streams.filterIndexed { queueIndex, _ ->
+                    queueIndex > currentIndex
+                }
+                // create a new list by replacing the old queue-end with the new, shuffled one
+                streams
+                    .filter { it !in toShuffle }
+                    .plus(toShuffle.shuffled())
+            }
+            4 -> streams.reversed()
+            else -> streams
+        }
+        PlayingQueue.setStreams(newQueue)
+    }
+
+    fun updateWatchPositions(index: Int) {
+        val streams = PlayingQueue.getStreams()
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            when (index) {
+                0 -> {
+                    streams.forEach {
+                        val videoId = it.url.orEmpty().toID()
+                        val duration = it.duration ?: 0
+                        val watchPosition = com.github.libretube.test.db.obj.WatchPosition(videoId, duration * 1000)
+                        com.github.libretube.test.db.DatabaseHolder.Database.watchPositionDao().insert(watchPosition)
+                    }
+                }
+                1 -> {
+                    streams.forEach {
+                        com.github.libretube.test.db.DatabaseHolder.Database.watchPositionDao()
+                            .deleteByVideoId(it.url.orEmpty().toID())
+                    }
+                }
+                2 -> {
+                    val currentStream = PlayingQueue.getCurrent()
+                    val filteredStreams = com.github.libretube.test.db.DatabaseHelper
+                        .filterUnwatched(streams)
+                        .toMutableList()
+                    if (currentStream != null &&
+                        filteredStreams.none { it.url?.toID() == currentStream.url?.toID() }
+                    ) {
+                        filteredStreams.add(0, currentStream)
+                    }
+                    PlayingQueue.setStreams(filteredStreams)
+                }
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Release the player or controller if needed
+        // Since we are using a Service, we might simply disconnect the controller
+        playerController.value?.release()
+        _playerController.value = null
+    }
+
+    fun onUserLeaveHint() {
+        // implemented in MainActivity
     }
 }

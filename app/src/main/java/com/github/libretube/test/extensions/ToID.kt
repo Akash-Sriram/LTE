@@ -1,8 +1,8 @@
 package com.github.libretube.test.extensions
 
-import com.github.libretube.test.ui.dialogs.ShareDialog.Companion.YOUTUBE_FRONTEND_URL
+import com.github.libretube.test.constants.IntentData.YOUTUBE_FRONTEND_URL
 
-import com.github.libretube.test.ui.dialogs.ShareDialog.Companion.YOUTUBE_SHORT_URL
+import com.github.libretube.test.constants.IntentData.YOUTUBE_SHORT_URL
 
 /**
  * format a full YouTube url or a path to a video/channel/playlist ID

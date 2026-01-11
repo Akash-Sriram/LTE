@@ -10,6 +10,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
 import com.github.libretube.test.helpers.RoomPreferenceDataStore
 import com.github.libretube.test.ui.models.PreferenceItem
 
@@ -30,6 +36,7 @@ fun SettingsGroupScreen(
                 is PreferenceItem.Clickable -> ClickablePreferenceWidget(item, onNavigate)
                 is PreferenceItem.Category -> CategoryHeaderWidget(item)
                 is PreferenceItem.Custom -> item.content()
+                is PreferenceItem.Color -> ColorPickerWidget(item)
             }
         }
     }
@@ -143,6 +150,39 @@ private fun ClickablePreferenceWidget(item: PreferenceItem.Clickable, onNavigate
             item.key?.let { onNavigate(it) }
         }
     )
+}
+
+@Composable
+private fun ColorPickerWidget(item: PreferenceItem.Color) {
+    val context = LocalContext.current
+    val value by RoomPreferenceDataStore.getIntFlow(item.key, item.defaultValue)
+        .collectAsStateWithLifecycle(initialValue = item.defaultValue)
+    
+    var showSheet by remember { mutableStateOf(false) }
+
+    PreferenceRow(
+        title = item.title,
+        summary = item.summary,
+        onClick = { showSheet = true },
+        widget = {
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .background(Color(value), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+            )
+        }
+    )
+
+    if (showSheet) {
+        com.github.libretube.test.ui.sheets.ColorPickerBottomSheet(
+            initialColor = androidx.compose.ui.graphics.Color(value),
+            onColorSelected = { color ->
+                RoomPreferenceDataStore.putInt(item.key, color.toArgb())
+            },
+            onDismissRequest = { showSheet = false }
+        )
+    }
 }
 
 @Composable

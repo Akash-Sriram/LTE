@@ -9,7 +9,6 @@ import androidx.activity.viewModels
 import androidx.activity.compose.setContent
 import com.github.libretube.test.ui.base.BaseActivity
 import com.github.libretube.test.ui.models.WelcomeViewModel
-import com.github.libretube.test.ui.preferences.BackupRestoreSettings
 import com.github.libretube.test.ui.screens.WelcomeScreen
 import com.github.libretube.test.ui.theme.LibreTubeTheme
 
