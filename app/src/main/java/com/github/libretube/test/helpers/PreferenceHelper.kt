@@ -313,6 +313,18 @@ object PreferenceHelper {
             regionPref
         }
     }
+    
+    /**
+     * Export all preferences as PreferenceItem list for backup
+     */
+    fun exportPreferences(): List<com.github.libretube.test.obj.PreferenceItem> {
+        return dataStore.getAll().map { (key, value) ->
+            com.github.libretube.test.obj.PreferenceItem(
+                key = key,
+                value = kotlinx.serialization.json.JsonPrimitive(value.toString())
+            )
+        }
+    }
 
     private fun getDefaultSharedPreferences(context: Context): SharedPreferences {
         return PreferenceManager.getDefaultSharedPreferences(context)

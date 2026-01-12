@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.AnchoredDraggableState
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.anchoredDraggable
+import androidx.compose.foundation.gestures.animateTo
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
@@ -20,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.github.libretube.test.ui.models.PlayerViewModel
 import com.github.libretube.test.ui.screens.PlayerState
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -28,11 +30,10 @@ fun DraggablePlayerPanel(
     state: AnchoredDraggableState<PlayerState>,
     onClose: () -> Unit,
     viewModel: PlayerViewModel,
-    videoSurface: @Composable (Modifier) -> Unit,
-    onQueueClick: () -> Unit,
+    videoSurface: @Composable (Modifier, Boolean) -> Unit,
     onChaptersClick: () -> Unit,
-    onSettingsClick: () -> Unit,
-    onVideoOptionsClick: () -> Unit
+    onVideoOptionsClick: () -> Unit,
+    onCommentsClick: () -> Unit
 ) {
     val offset = state.requireOffset()
     val maxOffset = state.anchors.positionOf(PlayerState.Collapsed)
@@ -41,7 +42,7 @@ fun DraggablePlayerPanel(
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.dp
     val miniWidth = 120.dp
-    val miniHeight = 67.5.dp
+    val miniHeight = 80.dp
     val fullWidth = screenWidth
     val fullHeight = screenWidth * 9f / 16f
 
@@ -55,29 +56,35 @@ fun DraggablePlayerPanel(
                 orientation = Orientation.Vertical
             )
     ) {
+        val currentStream by viewModel.currentStream.collectAsState()
+        val isPlaying by viewModel.isPlaying.collectAsState()
+        val playbackPosition by viewModel.playbackPosition.collectAsState()
+        val duration by viewModel.duration.collectAsState()
+        val playbackProgress = if (duration > 0) (playbackPosition.toFloat() / duration) else 0f
+
         val scaleX = androidx.compose.ui.util.lerp(1f, miniWidth.value / fullWidth.value, progress)
         val scaleY = androidx.compose.ui.util.lerp(1f, miniHeight.value / fullHeight.value, progress)
         
-        // Video container with graphicsLayer for high-performance scaling
+        val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        val currentTopPadding = statusBarPadding * (1f - progress)
+        
+        val currentWidth = androidx.compose.ui.util.lerp(fullWidth.value, miniWidth.value, progress).dp
+        val currentHeight = androidx.compose.ui.util.lerp(fullHeight.value, miniHeight.value, progress).dp
+        
+        val showControls by viewModel.showControls.collectAsState()
+
+        // Video container with layout-based resizing for SurfaceView compatibility
+        // When collapsed (progress=1), this matches the mini player thumb area
         Box(
             modifier = Modifier
-                .wrapContentSize(Alignment.TopStart)
-                .graphicsLayer {
-                    this.scaleX = scaleX
-                    this.scaleY = scaleY
-                    this.transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
-                }
-                .zIndex(1f)
+                .padding(top = currentTopPadding)
+                .size(currentWidth, currentHeight)
+                .zIndex(2f) 
         ) {
-            // Apply inverse scale to video surface to prevent aspect-ratio distortion (squashing)
+            // No inverse scaling needed here as we are changing the actual layout size
             videoSurface(
-                Modifier
-                    .size(fullWidth, fullHeight)
-                    .graphicsLayer {
-                        this.scaleX = 1f / scaleX
-                        this.scaleY = 1f / scaleY
-                        this.transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
-                    }
+                Modifier.fillMaxSize(),
+                progress > 0.8f // Disable gestures if mostly collapsed
             )
 
             // Gesture Overlay: Captured in Mini Player mode to prevent SurfaceView touch swallowing
@@ -89,39 +96,59 @@ fun DraggablePlayerPanel(
                         .clickable(enabled = false) {} // Just to swallow/allow drag
                 )
             }
+
+            // Full Player Controls Overlay (Placed ABOVE the video surface and CONSTRAINED to its size)
+            androidx.compose.animation.AnimatedVisibility(
+                visible = showControls && progress < 0.2f,
+                enter = androidx.compose.animation.fadeIn(),
+                exit = androidx.compose.animation.fadeOut(),
+                modifier = Modifier
+                    .matchParentSize()
+                    .graphicsLayer(alpha = (1f - progress * 5f).coerceIn(0f, 1f))
+            ) {
+                PlayerControls(
+                    viewModel = viewModel,
+                    modifier = Modifier.fillMaxSize(),
+                    onChaptersClick = onChaptersClick,
+                    onVideoOptionsClick = onVideoOptionsClick
+                )
+            }
         }
 
-        
-        val currentStream by viewModel.currentStream.collectAsState()
-        val isPlaying by viewModel.isPlaying.collectAsState()
-        val playbackPosition by viewModel.playbackPosition.collectAsState()
-        val duration by viewModel.duration.collectAsState()
-        val playbackProgress = if (duration > 0) (playbackPosition.toFloat() / duration) else 0f
-        
+        // MiniPlayer UI Overlay
+        val scope = rememberCoroutineScope()
         MiniPlayer(
             modifier = Modifier
+                .zIndex(3f) // ABOVE the video surface
                 .graphicsLayer(alpha = progress)
                 .fillMaxWidth()
                 .height(miniHeight)
-                .padding(start = miniWidth),
+                .padding(start = miniWidth)
+                .background(MaterialTheme.colorScheme.surface), // Background only for metadata area
             title = currentStream?.title ?: "",
             channelName = currentStream?.uploaderName ?: "",
             thumbnailUrl = currentStream?.thumbnail,
             isPlaying = isPlaying,
             progress = playbackProgress,
             onPlayPauseClick = { viewModel.togglePlayPause() },
+            onClick = {
+                scope.launch {
+                    state.animateTo(PlayerState.Expanded)
+                }
+            },
             onClose = onClose
         )
 
+        // Full Player Content (Fade out when collapsing)
         FullPlayer(
             viewModel = viewModel,
             modifier = Modifier
-                .fillMaxSize(),
+                .fillMaxSize()
+                .zIndex(1f), // Base layer for scrollable content
             alpha = (1f - progress * 2f).coerceIn(0f, 1f), // Fade out faster
-            onQueueClick = onQueueClick,
             onChaptersClick = onChaptersClick,
-            onSettingsClick = onSettingsClick,
-            onVideoOptionsClick = onVideoOptionsClick
+            onVideoOptionsClick = onVideoOptionsClick,
+            onCommentsClick = onCommentsClick
         )
     }
 }

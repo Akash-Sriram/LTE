@@ -35,6 +35,8 @@ import com.github.libretube.test.services.DownloadService
 import com.github.libretube.test.enums.DownloadTab
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import com.github.libretube.test.db.DatabaseHelper
 import com.github.libretube.test.ui.sheets.DownloadOptionsSheet
 import com.github.libretube.test.api.obj.StreamItem
 
@@ -197,27 +199,30 @@ fun DownloadsScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(sortedDownloads, key = { it.download.videoId }) { download ->
-                        val downloadItemId = download.downloadItems.firstOrNull()?.id ?: 0
-                        DownloadItemCard(
-                            download = download,
-                            progress = progressMap[downloadItemId],
-                            onResume = {
-                                downloadService?.getService()?.resume(downloadItemId)
-                            },
-                            onPause = {
-                                downloadService?.getService()?.pause(downloadItemId)
-                            },
-                            onDelete = {
-                                // Handled via options or direct delete if needed
-                            },
-                            onLongClick = {
-                                selectedDownload = download
-                                showDownloadOptions = true
-                            },
-                            onClick = {
-                                onNavigateToVideo(download.download.videoId)
-                            }
-                        )
+                                val scope = rememberCoroutineScope()
+                                val downloadItemId = download.downloadItems.firstOrNull()?.id ?: 0
+                                DownloadItemCard(
+                                    download = download,
+                                    progress = progressMap[downloadItemId],
+                                    onResume = {
+                                        downloadService?.getService()?.resume(downloadItemId)
+                                    },
+                                    onPause = {
+                                        downloadService?.getService()?.pause(downloadItemId)
+                                    },
+                                    onDelete = {
+                                        scope.launch {
+                                            DownloadHelper.deleteDownloadIncludingFiles(context, download)
+                                        }
+                                    },
+                                    onLongClick = {
+                                        selectedDownload = download
+                                        showDownloadOptions = true
+                                    },
+                                    onClick = {
+                                        onNavigateToVideo(download.download.videoId)
+                                    }
+                                )
                     }
                 }
             }
@@ -267,6 +272,7 @@ fun DownloadsScreen(
     // Delete all dialog
     if (showDeleteAllDialog) {
         var deleteOnlyWatched by remember { mutableStateOf(false) }
+        val scope = rememberCoroutineScope()
         AlertDialog(
             onDismissRequest = { showDeleteAllDialog = false },
             title = { Text(stringResource(R.string.delete_all)) },
@@ -285,7 +291,14 @@ fun DownloadsScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        // Delete all logic
+                        scope.launch {
+                            val toDelete = if (deleteOnlyWatched) {
+                                sortedDownloads.filter { DatabaseHelper.isVideoWatched(it.download.videoId, it.download.duration ?: 0) }
+                            } else {
+                                sortedDownloads
+                            }
+                            toDelete.forEach { DownloadHelper.deleteDownloadIncludingFiles(context, it) }
+                        }
                         showDeleteAllDialog = false
                     }
                 ) {
@@ -309,13 +322,16 @@ fun DownloadsScreen(
             uploaderName = download.download.uploader,
             thumbnail = download.download.thumbnailPath?.toString()
         )
+        val scope = rememberCoroutineScope()
         DownloadOptionsSheet(
             streamItem = streamItem,
             downloadTab = selectedTab ?: DownloadTab.ALL,
             onDismissRequest = { showDownloadOptions = false },
             onShareClick = { /* TODO */ },
             onDeleteClick = {
-                // Delete download logic
+                scope.launch {
+                    DownloadHelper.deleteDownloadIncludingFiles(context, download)
+                }
                 showDownloadOptions = false
             },
             onGoToVideoClick = {

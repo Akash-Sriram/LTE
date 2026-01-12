@@ -29,6 +29,10 @@ class WatchHistoryModel : ViewModel() {
     private val _selectedItems = MutableStateFlow<Set<String>>(emptySet())
     val selectedItems = _selectedItems.asStateFlow()
 
+    init {
+        fetchNextPage()
+    }
+
     private var currentPage = 1
     private var isLoading = false
 
@@ -56,7 +60,7 @@ class WatchHistoryModel : ViewModel() {
     val groupedWatchHistory: StateFlow<Map<String, List<WatchHistoryItem>>> = filteredWatchHistory
         .map { history ->
             history.groupBy { 
-                TextUtils.formatRelativeDate(it.uploadDate?.toMillis() ?: 0L).toString() 
+                TextUtils.formatRelativeDate(it.watchedAt).toString() 
             }
         }
         .stateIn(

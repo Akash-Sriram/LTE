@@ -67,7 +67,10 @@ data class StreamItem(
         uploader = uploaderName,
         uploaderUrl = uploaderUrl?.toID(),
         uploaderAvatar = uploaderAvatar,
-        thumbnailUrl = thumbnail
+        thumbnailUrl = thumbnail,
+        duration = duration,
+        isShort = isShort,
+        watchedAt = System.currentTimeMillis()
     )
 
     companion object {

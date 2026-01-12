@@ -23,7 +23,7 @@ fun RelatedVideosSection(
         Column(modifier = modifier.padding(vertical = 8.dp)) {
             Text(
                 text = "Related Videos",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)

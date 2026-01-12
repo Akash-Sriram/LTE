@@ -95,6 +95,37 @@ object SettingsRegistry {
                     "30s" to "30",
                     "60s" to "60"
                 )
+            ),
+            PreferenceItem.Category(stringResource(R.string.captions)),
+            PreferenceItem.Switch(
+                key = PreferenceKeys.SYSTEM_CAPTION_STYLE,
+                title = stringResource(R.string.system_caption_style),
+                summary = stringResource(R.string.system_caption_style_summary),
+                defaultValue = true
+            ),
+            PreferenceItem.Switch(
+                key = PreferenceKeys.RICH_CAPTION_RENDERING,
+                title = stringResource(R.string.rich_caption_rendering),
+                summary = stringResource(R.string.rich_caption_rendering_summary),
+                defaultValue = false
+            ),
+            PreferenceItem.Category(stringResource(R.string.quality)),
+            PreferenceItem.List(
+                key = PreferenceKeys.DEFAULT_RESOLUTION,
+                title = stringResource(R.string.default_video_quality),
+                summary = stringResource(R.string.default_video_quality_summary),
+                defaultValue = "auto",
+                entries = mapOf(
+                    "Auto" to "auto",
+                    "144p" to "144",
+                    "240p" to "240",
+                    "360p" to "360",
+                    "480p" to "480",
+                    "720p" to "720",
+                    "1080p" to "1080",
+                    "1440p" to "1440",
+                    "2160p" to "2160"
+                )
             )
         )
     }
@@ -128,6 +159,32 @@ object SettingsRegistry {
                 key = PreferenceKeys.INCLUDE_TIMESTAMP_IN_BACKUP_FILENAME,
                 title = stringResource(R.string.time),
                 defaultValue = true
+            ),
+            PreferenceItem.Category(stringResource(R.string.data_bandwidth)),
+            PreferenceItem.Switch(
+                key = PreferenceKeys.BANDWIDTH_SAVER_MODE,
+                title = stringResource(R.string.bandwidth_saver),
+                summary = stringResource(R.string.bandwidth_saver_summary),
+                defaultValue = false
+            ),
+            PreferenceItem.Category(stringResource(R.string.advanced)),
+            PreferenceItem.Switch(
+                key = PreferenceKeys.AUTOMATIC_UPDATE_CHECKS,
+                title = stringResource(R.string.auto_update_checks),
+                summary = stringResource(R.string.auto_update_checks_summary),
+                defaultValue = true
+            ),
+            PreferenceItem.Switch(
+                key = PreferenceKeys.ENABLE_ROBUST_LOGGING,
+                title = stringResource(R.string.extended_debug_logging),
+                summary = stringResource(R.string.extended_debug_logging_summary),
+                defaultValue = false
+            ),
+            PreferenceItem.Clickable(
+                key = PreferenceKeys.CLEAR_CACHE,
+                title = stringResource(R.string.clear_cache),
+                summary = stringResource(R.string.clear_cache_summary),
+                onClick = {} // Handle cache clearing
             )
         )
     }
@@ -204,6 +261,54 @@ object SettingsRegistry {
                 title = stringResource(R.string.color),
                 defaultValue = android.graphics.Color.parseColor("#0202ED")
             ),
+            PreferenceItem.List(
+                key = PreferenceKeys.SB_CATEGORY_SELFPROMO,
+                title = stringResource(R.string.category_selfpromo),
+                summary = stringResource(R.string.category_selfpromo_summary),
+                defaultValue = "off",
+                entries = segmentEntries
+            ),
+            PreferenceItem.Color(
+                key = "selfpromo_color",
+                title = stringResource(R.string.color),
+                defaultValue = android.graphics.Color.parseColor("#FFFF00")
+            ),
+            PreferenceItem.List(
+                key = PreferenceKeys.SB_CATEGORY_MUSIC_OFFTOPIC,
+                title = stringResource(R.string.category_music_offtopic),
+                summary = stringResource(R.string.category_music_offtopic_summary),
+                defaultValue = "off",
+                entries = segmentEntries
+            ),
+            PreferenceItem.Color(
+                key = "music_offtopic_color",
+                title = stringResource(R.string.color),
+                defaultValue = android.graphics.Color.parseColor("#FFA500")
+            ),
+            PreferenceItem.List(
+                key = PreferenceKeys.SB_CATEGORY_PREVIEW,
+                title = stringResource(R.string.category_preview),
+                summary = stringResource(R.string.category_preview_summary),
+                defaultValue = "off",
+                entries = segmentEntries
+            ),
+            PreferenceItem.Color(
+                key = "preview_color",
+                title = stringResource(R.string.color),
+                defaultValue = android.graphics.Color.parseColor("#008FD6")
+            ),
+            PreferenceItem.List(
+                key = PreferenceKeys.SB_CATEGORY_FILLER,
+                title = stringResource(R.string.category_filler),
+                summary = stringResource(R.string.category_filler_summary),
+                defaultValue = "off",
+                entries = segmentEntries
+            ),
+            PreferenceItem.Color(
+                key = "filler_color",
+                title = stringResource(R.string.color),
+                defaultValue = android.graphics.Color.parseColor("#7300FF")
+            ),
 
             PreferenceItem.Category(stringResource(R.string.dearrow)),
             PreferenceItem.Switch(
@@ -267,6 +372,39 @@ object SettingsRegistry {
                 title = stringResource(R.string.concurrent_downloads),
                 defaultValue = "1",
                 entries = mapOf("1" to "1", "2" to "2", "3" to "3", "4" to "4", "5" to "5")
+            ),
+            PreferenceItem.Category(stringResource(R.string.external_provider)),
+            PreferenceItem.Clickable(
+                key = PreferenceKeys.EXTERNAL_DOWNLOADER_PACKAGE,
+                title = stringResource(R.string.external_downloader),
+                summary = stringResource(R.string.external_downloader_summary),
+                onClick = {} // Handle package name input
+            ),
+            PreferenceItem.Category(stringResource(R.string.quality_defaults)),
+            PreferenceItem.List(
+                key = PreferenceKeys.DEFAULT_DOWNLOAD_VIDEO_QUALITY,
+                title = stringResource(R.string.default_download_video_quality),
+                defaultValue = "1080",
+                entries = mapOf(
+                    "Best" to "best",
+                    "2160p" to "2160",
+                    "1440p" to "1440",
+                    "1080p" to "1080",
+                    "720p" to "720",
+                    "480p" to "480",
+                    "360p" to "360"
+                )
+            ),
+            PreferenceItem.List(
+                key = PreferenceKeys.DEFAULT_DOWNLOAD_AUDIO_QUALITY,
+                title = stringResource(R.string.default_download_audio_quality),
+                defaultValue = "best",
+                entries = mapOf(
+                    "Best" to "best",
+                    "High (256kbps)" to "256",
+                    "Medium (128kbps)" to "128",
+                    "Low (64kbps)" to "64"
+                )
             )
         )
     }
@@ -276,16 +414,10 @@ object SettingsRegistry {
         return listOf(
             PreferenceItem.Category(stringResource(R.string.backup_restore)),
             PreferenceItem.Clickable(
-                key = "export",
-                title = stringResource(R.string.backup),
-                summary = stringResource(R.string.export_subscriptions),
-                onClick = {} // Trigger export
-            ),
-            PreferenceItem.Clickable(
-                key = "import",
-                title = stringResource(R.string.restore),
-                summary = stringResource(R.string.import_from_yt),
-                onClick = {} // Trigger import
+                key = "backup_restore_screen",
+                title = stringResource(R.string.backup_restore),
+                summary = "Manage backups and restore data",
+                onClick = {} // Navigation handled in SettingsGroupScreen
             )
         )
     }

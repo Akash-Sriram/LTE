@@ -31,6 +31,7 @@ import com.github.libretube.test.ui.sheets.DownloadPlaylistBottomSheet
 import com.github.libretube.test.extensions.toID
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import com.github.libretube.test.ui.util.animateEnter
 
 data class LibraryScreenState(
     val historyItems: List<VideoCardState> = emptyList(),
@@ -46,7 +47,8 @@ data class LibraryScreenState(
 @Composable
 fun LibraryScreen(
     navController: androidx.navigation.NavController,
-    libraryViewModel: com.github.libretube.test.ui.models.LibraryViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    libraryViewModel: com.github.libretube.test.ui.models.LibraryViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     
@@ -141,7 +143,8 @@ fun LibraryScreen(
         },
         onRefresh = {
             libraryViewModel.refreshData()
-        }
+        },
+        contentPadding = contentPadding
     )
 
     if (showPlaylistOptions) {
@@ -218,7 +221,8 @@ fun LibraryContent(
     onPlaylistLongClick: (String, String) -> Unit,
     onBookmarkClick: (String) -> Unit,
     onBookmarkLongClick: (String, String) -> Unit,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     Scaffold(
         topBar = {
@@ -241,14 +245,20 @@ fun LibraryContent(
             ) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 16.dp)
+                    contentPadding = PaddingValues(
+                        bottom = 16.dp + contentPadding.calculateBottomPadding(),
+                        top = contentPadding.calculateTopPadding()
+                    )
                 ) {
+                    var itemIndex = 0
+                    
                     // Quick Access Dashboard
                     item {
                         DashboardSection(
                             state = state,
                             onHistoryClick = onHistoryClick,
-                            onDownloadsClick = onDownloadsClick
+                            onDownloadsClick = onDownloadsClick,
+                            modifier = Modifier.animateEnter(itemIndex++)
                         )
                     }
 
@@ -257,13 +267,15 @@ fun LibraryContent(
                         item {
                             LibrarySectionHeader(
                                 title = stringResource(R.string.recently_watched),
-                                onSeeAllClick = onRecentlyWatchedSeeAll
+                                onSeeAllClick = onRecentlyWatchedSeeAll,
+                                modifier = Modifier.animateEnter(itemIndex++)
                             )
                         }
                         item {
                             LazyRow(
                                 contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.animateEnter(itemIndex++)
                             ) {
                                 items(state.historyItems) { video ->
                                     VideoCard(
@@ -281,7 +293,8 @@ fun LibraryContent(
                         LibrarySectionHeader(
                             title = stringResource(R.string.playlists),
                             onSeeAllClick = onPlaylistsSeeAll,
-                            onAddClick = onCreatePlaylistClick
+                            onAddClick = onCreatePlaylistClick,
+                            modifier = Modifier.animateEnter(itemIndex++)
                         )
                     }
                     if (state.playlists.isEmpty()) {
@@ -290,13 +303,14 @@ fun LibraryContent(
                         item {
                             LazyRow(
                                 contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.animateEnter(itemIndex++)
                             ) {
                                 items(state.playlists) { playlist ->
-                                    LibraryShelfItem(
+                                    com.github.libretube.test.ui.components.PlaylistCard(
                                         state = playlist,
                                         onClick = { onPlaylistClick(playlist.playlistId) },
-                                        onLongClick = { onPlaylistLongClick(playlist.playlistId, playlist.title) }
+                                        modifier = Modifier.width(280.dp)
                                     )
                                 }
                             }
@@ -308,19 +322,21 @@ fun LibraryContent(
                         item {
                             LibrarySectionHeader(
                                 title = stringResource(R.string.bookmarks),
-                                onSeeAllClick = onBookmarksSeeAll
+                                onSeeAllClick = onBookmarksSeeAll,
+                                modifier = Modifier.animateEnter(itemIndex++)
                             )
                         }
                         item {
                             LazyRow(
                                 contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.animateEnter(itemIndex++)
                             ) {
                                 items(state.bookmarks) { bookmark ->
-                                    LibraryShelfItem(
+                                    com.github.libretube.test.ui.components.PlaylistCard(
                                         state = bookmark,
                                         onClick = { onBookmarkClick(bookmark.playlistId) },
-                                        onLongClick = { onBookmarkLongClick(bookmark.playlistId, bookmark.title) }
+                                        modifier = Modifier.width(280.dp)
                                     )
                                 }
                             }
@@ -336,10 +352,11 @@ fun LibraryContent(
 fun DashboardSection(
     state: LibraryScreenState,
     onHistoryClick: () -> Unit,
-    onDownloadsClick: () -> Unit
+    onDownloadsClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -413,10 +430,11 @@ fun DashboardCard(
 fun LibrarySectionHeader(
     title: String,
     onSeeAllClick: () -> Unit,
-    onAddClick: (() -> Unit)? = null
+    onAddClick: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically

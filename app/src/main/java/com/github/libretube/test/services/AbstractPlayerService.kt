@@ -41,6 +41,7 @@ import com.github.libretube.test.util.PauseableTimer
 import com.github.libretube.test.util.PlayingQueue
 import com.github.libretube.test.util.PlayingQueueMode
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -307,6 +308,21 @@ abstract class AbstractPlayerService : MediaLibraryService(), MediaLibrarySessio
             .build()
     }
 
+    override fun onPlaybackResumption(
+        mediaSession: MediaSession,
+        controller: MediaSession.ControllerInfo
+    ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+        val settableFuture = SettableFuture.create<MediaSession.MediaItemsWithStartPosition>()
+        settableFuture.set(
+            MediaSession.MediaItemsWithStartPosition(
+                emptyList(),
+                C.INDEX_UNSET,
+                C.TIME_UNSET
+            )
+        )
+        return settableFuture
+    }
+
     @OptIn(UnstableApi::class)
     private fun createPlayerAndMediaSession() {
         val trackSelector = DefaultTrackSelectorWithAudioQualitySupport(this)
@@ -314,7 +330,8 @@ abstract class AbstractPlayerService : MediaLibraryService(), MediaLibrarySessio
 
         val player = PlayerHelper.createPlayer(this, trackSelector)
         // prevent android from putting LibreTube to sleep when locked
-        player.setWakeMode(if (isOfflinePlayer) C.WAKE_MODE_LOCAL else C.WAKE_MODE_NETWORK)
+        val wakeMode = if (isOfflinePlayer) C.WAKE_MODE_LOCAL.toInt() else C.WAKE_MODE_NETWORK.toInt()
+        player.setWakeMode(wakeMode)
         player.addListener(playerListener)
         this.exoPlayer = player
 
@@ -369,7 +386,6 @@ abstract class AbstractPlayerService : MediaLibraryService(), MediaLibrarySessio
                 handlePlayerAction(PlayerEvent.Stop)
             }
         }
-
         return super.onMediaButtonEvent(session, controllerInfo, intent)
     }
 
@@ -378,7 +394,6 @@ abstract class AbstractPlayerService : MediaLibraryService(), MediaLibrarySessio
         // as the playerController must be released before we finish the session
         // otherwise there would be a
         // java.lang.SecurityException: Session rejected the connection request.
-        // because there can't be two active playerControllers at the same time.
         handler.postDelayed(50) {
             saveWatchPosition()
 
@@ -388,7 +403,6 @@ abstract class AbstractPlayerService : MediaLibraryService(), MediaLibrarySessio
             handler.removeCallbacksAndMessages(null)
 
             runCatching {
-                exoPlayer?.stop()
                 exoPlayer?.release()
             }
 

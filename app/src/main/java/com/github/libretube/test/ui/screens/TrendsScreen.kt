@@ -25,6 +25,8 @@ import com.github.libretube.test.ui.components.VideoCard
 import com.github.libretube.test.ui.components.VideoCardState
 import com.github.libretube.test.ui.models.TrendsViewModel
 import com.github.libretube.test.util.TextUtils
+import com.github.libretube.test.ui.util.animateEnter
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import kotlinx.coroutines.launch
 import com.github.libretube.test.ui.sheets.DownloadBottomSheet
 import com.github.libretube.test.ui.sheets.ShareBottomSheet
@@ -34,7 +36,8 @@ import com.github.libretube.test.enums.ShareObjectType
 @Composable
 fun TrendsScreen(
     navController: androidx.navigation.NavController,
-    viewModel: com.github.libretube.test.ui.models.TrendsViewModel
+    viewModel: com.github.libretube.test.ui.models.TrendsViewModel,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val context = LocalContext.current
     // Fetch categories directly as in Fragment
@@ -51,7 +54,8 @@ fun TrendsScreen(
         },
         onVideoLongClick = { streamItem ->
             // Handled in TrendsContent via state
-        }
+        },
+        contentPadding = contentPadding
     )
 }
 
@@ -62,7 +66,8 @@ fun TrendsContent(
     viewModel: com.github.libretube.test.ui.models.TrendsViewModel,
     onVideoClick: (com.github.libretube.test.api.obj.StreamItem) -> Unit,
     onVideoLongClick: (com.github.libretube.test.api.obj.StreamItem) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val context = LocalContext.current
     val pagerState = androidx.compose.foundation.pager.rememberPagerState(pageCount = { categories.size })
@@ -133,7 +138,8 @@ fun TrendsContent(
                     selectedStreamItem = streamItem
                     showVideoOptions = true
                 },
-                onShowRegionDialog = { showRegionDialog = true }
+                onShowRegionDialog = { showRegionDialog = true },
+                contentPadding = contentPadding
             )
         }
     }
@@ -195,7 +201,8 @@ fun TrendingContentPage(
     onRefresh: () -> Unit,
     onVideoClick: (StreamItem) -> Unit,
     onVideoLongClick: (StreamItem) -> Unit,
-    onShowRegionDialog: () -> Unit
+    onShowRegionDialog: () -> Unit,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val context = LocalContext.current
     val isLoading = trendingData == null
@@ -239,11 +246,16 @@ fun TrendingContentPage(
                 } else {
                     LazyVerticalGrid(
                         columns = GridCells.Adaptive(300.dp),
-                        contentPadding = PaddingValues(8.dp),
+                        contentPadding = PaddingValues(
+                            start = 8.dp, 
+                            top = 8.dp + contentPadding.calculateTopPadding(), 
+                            end = 8.dp, 
+                            bottom = 8.dp + contentPadding.calculateBottomPadding()
+                        ),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(streams, key = { it.url.orEmpty() }) { stream ->
+                        itemsIndexed(streams, key = { _, item -> item.url.orEmpty() }) { index, stream ->
                             VideoCard(
                                 state = VideoCardState(
                                     videoId = stream.url?.substringAfterLast("/") ?: "",
@@ -261,7 +273,8 @@ fun TrendingContentPage(
                                     uploaderAvatarUrl = stream.uploaderAvatar
                                 ),
                                 onClick = { onVideoClick(stream) },
-                                onLongClick = { onVideoLongClick(stream) }
+                                onLongClick = { onVideoLongClick(stream) },
+                                modifier = Modifier.animateEnter(index)
                             )
                         }
                     }

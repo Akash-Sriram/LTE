@@ -3,6 +3,7 @@ package com.github.libretube.test.ui.sheets
 import androidx.compose.ui.Modifier
 import androidx.compose.runtime.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import android.content.Context
@@ -41,6 +42,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.github.libretube.test.api.PlaylistsHelper
 import com.github.libretube.test.api.MediaServiceRepository
 import com.github.libretube.test.enums.DownloadTab
+import com.github.libretube.test.ui.models.PlayerViewModel
 import androidx.compose.animation.animateContentSize
 import androidx.compose.ui.platform.LocalContext as LocalContextAlias
 
@@ -51,15 +53,21 @@ fun VideoOptionsSheet(
     onDismissRequest: () -> Unit,
     onShareClick: () -> Unit,
     onDownloadClick: () -> Unit,
+    onQualityClick: () -> Unit = {},
+    playbackSpeed: Float = 1f,
+    onSpeedChange: (Float) -> Unit = {},
+    playbackPitch: Float = 1f,
+    onPitchChange: (Float) -> Unit = {},
+    initialScreen: String = "MAIN",
     onMarkWatchedStatusChange: () -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val videoId = remember(streamItem) { streamItem.url?.toID() ?: "" }
     var isWatched by remember { mutableStateOf(false) }
-
+ 
     // Sub-sheet state
-    var currentScreen by remember { mutableStateOf("MAIN") } // MAIN, ADD_TO_PLAYLIST, CREATE_PLAYLIST
+    var currentScreen by remember { mutableStateOf(initialScreen) } // MAIN, ADD_TO_PLAYLIST, CREATE_PLAYLIST, SPEED, PITCH
 
     val playlistViewModel: PlaylistViewModel = viewModel(factory = PlaylistViewModel.Factory)
     val playlistState by playlistViewModel.uiState.observeAsState()
@@ -167,6 +175,40 @@ fun VideoOptionsSheet(
                             )
                         }
 
+                        // Settings-like options
+                        item {
+                            ListItem(
+                                headlineContent = { Text("Quality") },
+                                leadingContent = { Icon(Icons.Default.HighQuality, contentDescription = null) },
+                                modifier = Modifier.clickable {
+                                    onDismissRequest()
+                                    onQualityClick()
+                                }
+                            )
+                        }
+
+                        item {
+                            ListItem(
+                                headlineContent = { Text("Playback Speed") },
+                                supportingContent = { Text("${playbackSpeed}x") },
+                                leadingContent = { Icon(Icons.Default.Speed, contentDescription = null) },
+                                modifier = Modifier.clickable {
+                                    currentScreen = "SPEED"
+                                }
+                            )
+                        }
+
+                        item {
+                            ListItem(
+                                headlineContent = { Text("Pitch") },
+                                supportingContent = { Text("${playbackPitch}x") },
+                                leadingContent = { Icon(Icons.Default.Tune, contentDescription = null) },
+                                modifier = Modifier.clickable {
+                                    currentScreen = "PITCH"
+                                }
+                            )
+                        }
+
                         // Watch Status Options
                         if (PlayerHelper.watchPositionsAny || PlayerHelper.watchHistoryEnabled) {
                             item {
@@ -264,6 +306,66 @@ fun VideoOptionsSheet(
                             currentScreen = "ADD_TO_PLAYLIST"
                         }
                     )
+                }
+                "SPEED" -> {
+                    val availableSpeeds = listOf(0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
+                    Column(modifier = Modifier.padding(16.dp).padding(bottom = 32.dp)) {
+                        Text(
+                            text = "Playback Speed",
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                        availableSpeeds.forEach { speed ->
+                            ListItem(
+                                headlineContent = { Text("${speed}x") },
+                                modifier = Modifier.clickable {
+                                    onSpeedChange(speed)
+                                    currentScreen = "MAIN"
+                                },
+                                trailingContent = {
+                                    if (speed == playbackSpeed) {
+                                        Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+                            )
+                        }
+                        TextButton(
+                            onClick = { currentScreen = "MAIN" },
+                            modifier = Modifier.align(Alignment.End)
+                        ) {
+                            Text("Back")
+                        }
+                    }
+                }
+                "PITCH" -> {
+                    val availablePitches = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f)
+                    Column(modifier = Modifier.padding(16.dp).padding(bottom = 32.dp)) {
+                        Text(
+                            text = "Pitch",
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                        availablePitches.forEach { pitch ->
+                            ListItem(
+                                headlineContent = { Text("${pitch}x") },
+                                modifier = Modifier.clickable {
+                                    onPitchChange(pitch)
+                                    currentScreen = "MAIN"
+                                },
+                                trailingContent = {
+                                    if (pitch == playbackPitch) {
+                                        Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+                            )
+                        }
+                        TextButton(
+                            onClick = { currentScreen = "MAIN" },
+                            modifier = Modifier.align(Alignment.End)
+                        ) {
+                            Text("Back")
+                        }
+                    }
                 }
             }
         }
@@ -631,6 +733,160 @@ fun DownloadOptionsSheet(
                     )
                 }
             }
+        }
+    }
+}
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SortSheet(
+    title: String,
+    currentSort: String,
+    onSortSelected: (String) -> Unit,
+    onDismissRequest: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        dragHandle = { BottomSheetDefaults.DragHandle() }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 32.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(16.dp)
+            )
+            
+            val options = listOf(
+                "alphabetic" to stringResource(R.string.alphabetic),
+                "alphabetic_reversed" to stringResource(R.string.alphabetic_reversed),
+                "creation_date" to stringResource(R.string.creation_date),
+                "creation_date_reversed" to stringResource(R.string.creation_date_reversed),
+                "custom" to stringResource(R.string.sort_custom)
+            )
+            
+            options.forEach { (key, label) ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onSortSelected(key)
+                            onDismissRequest()
+                        }
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = currentSort == key,
+                        onClick = null // Row handles click
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(text = label)
+                }
+            }
+        }
+    }
+}
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ConsolidatedOptionsSheet(
+    viewModel: PlayerViewModel,
+    onDismissRequest: () -> Unit,
+    onQualityClick: () -> Unit,
+    onCaptionsClick: () -> Unit,
+    onAudioTrackClick: () -> Unit,
+    onSleepTimerClick: () -> Unit,
+    onStatsClick: () -> Unit
+) {
+    val playbackSpeed by viewModel.playbackSpeed.collectAsState()
+    val repeatMode by viewModel.repeatMode.collectAsState()
+    val resizeMode by viewModel.resizeMode.collectAsState()
+
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        dragHandle = { BottomSheetDefaults.DragHandle() }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 32.dp)
+        ) {
+            // Repeat Mode
+            val repeatLabel = when (repeatMode) {
+                androidx.media3.common.Player.REPEAT_MODE_OFF -> "None"
+                androidx.media3.common.Player.REPEAT_MODE_ONE -> "One"
+                androidx.media3.common.Player.REPEAT_MODE_ALL -> "All"
+                else -> "None"
+            }
+            ListItem(
+                headlineContent = { Text("Repeat mode ($repeatLabel)") },
+                leadingContent = { Icon(Icons.Default.Repeat, contentDescription = null) },
+                modifier = Modifier.clickable { viewModel.cycleRepeatMode() }
+            )
+
+            // Resize Mode
+            val resizeLabel = when (resizeMode) {
+                androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT -> "Fit"
+                androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL -> "Fill"
+                androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM -> "Zoom"
+                else -> "Fit"
+            }
+            ListItem(
+                headlineContent = { Text("Resize mode ($resizeLabel)") },
+                leadingContent = { Icon(Icons.Default.AspectRatio, contentDescription = null) },
+                modifier = Modifier.clickable { viewModel.cycleResizeMode() }
+            )
+
+            // Playback Speed
+            ListItem(
+                headlineContent = { Text("Playback speed (${playbackSpeed}x)") },
+                leadingContent = { Icon(Icons.Default.Speed, contentDescription = null) },
+                modifier = Modifier.clickable { 
+                    // Simple next speed cycle for now or keep existing Speed screen?
+                    // The image shows one-click potentially, but usually it opens sub-menu.
+                    // For now, let's keep it simple.
+                    val speeds = listOf(0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
+                    val nextIdx = (speeds.indexOf(playbackSpeed) + 1) % speeds.size
+                    viewModel.setPlaybackSpeed(speeds[nextIdx])
+                }
+            )
+
+            // Sleep Timer
+            ListItem(
+                headlineContent = { Text("Sleep timer (Off)") },
+                leadingContent = { Icon(Icons.Default.HourglassEmpty, contentDescription = null) },
+                modifier = Modifier.clickable { onSleepTimerClick() }
+            )
+
+            // Quality
+            ListItem(
+                headlineContent = { Text("Quality (1080p - limited)") }, // Simplified label
+                leadingContent = { Icon(Icons.Default.HighQuality, contentDescription = null) }, // Keep HighQuality, usually in default
+                modifier = Modifier.clickable { onQualityClick() }
+            )
+
+            // Audio Track
+            ListItem(
+                headlineContent = { Text("Audio track (default or unknown)") },
+                leadingContent = { Icon(Icons.Default.MusicNote, contentDescription = null) },
+                modifier = Modifier.clickable { onAudioTrackClick() }
+            )
+
+            // Captions
+            ListItem(
+                headlineContent = { Text("Captions (None)") },
+                leadingContent = { Icon(Icons.Default.ClosedCaption, contentDescription = null) },
+                modifier = Modifier.clickable { onCaptionsClick() }
+            )
+
+            // Stats
+            ListItem(
+                headlineContent = { Text("Stats for nerds") },
+                leadingContent = { Icon(Icons.Default.Info, contentDescription = null) },
+                modifier = Modifier.clickable { onStatsClick() }
+            )
         }
     }
 }

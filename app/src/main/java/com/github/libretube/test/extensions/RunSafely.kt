@@ -9,8 +9,14 @@ suspend fun <T> runSafely(
 ) {
     withContext(Dispatchers.IO) {
         val result = runCatching { ioBlock.invoke() }
+            .onFailure { android.util.Log.e("RunSafely", "Error in runSafely", it) }
             .getOrNull()
-            ?.takeIf { it.isNotEmpty() } ?: return@withContext
+            ?.takeIf { it.isNotEmpty() } 
+        
+        if (result == null) {
+             android.util.Log.w("RunSafely", "Result was null or empty")
+             return@withContext
+        }
 
         withContext(Dispatchers.Main) {
             if (result.isNotEmpty()) {

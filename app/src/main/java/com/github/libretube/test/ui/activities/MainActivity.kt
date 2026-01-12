@@ -20,11 +20,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Subscriptions
+import androidx.compose.material.icons.outlined.VideoLibrary
+import androidx.compose.material.icons.outlined.Whatshot
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
@@ -49,7 +56,6 @@ import androidx.navigation.ui.onNavDestinationSelected
 import androidx.navigation.ui.setupWithNavController
 import androidx.recyclerview.widget.RecyclerView
 import com.github.libretube.test.BuildConfig
-// import com.github.libretube.test.NavDirections
 import com.github.libretube.test.R
 import com.github.libretube.test.compat.PictureInPictureCompat
 import com.github.libretube.test.constants.IntentData
@@ -66,6 +72,8 @@ import com.github.libretube.test.helpers.PreferenceHelper
 import com.github.libretube.test.helpers.ThemeHelper
 import com.github.libretube.test.ui.base.BaseActivity
 import com.github.libretube.test.ui.extensions.onSystemInsets
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.graphics.Color
 // import com.github.libretube.test.ui.extensions.runOnPlayerFragment
 // import com.github.libretube.test.ui.fragments.AudioPlayerFragment // Removed - replaced by Compose PlayerScreen
 // import com.github.libretube.test.ui.fragments.PlayerFragment
@@ -86,6 +94,8 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import androidx.navigation.NavHostController
 import com.github.libretube.test.ui.navigation.MainNavigation
 import com.github.libretube.test.ui.navigation.Routes
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.github.libretube.test.ui.components.FloatingBottomNavigation
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,71 +105,154 @@ fun MainTopAppBar(
     onQueryChange: (String) -> Unit,
     onSearchActiveChange: (Boolean) -> Unit,
     onSearchQuery: (String) -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    scrollBehavior: TopAppBarScrollBehavior,
+    searchViewModel: SearchViewModel,
+    currentRoute: String?,
+    currentQuery: String? // Actual query from navigation
 ) {
     if (isSearchActive) {
+        val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
         SearchBar(
             query = searchQuery,
             onQueryChange = onQueryChange,
             onSearch = {
-                onSearchActiveChange(false)
-                onSearchQuery(it)
+                if (it.isNotBlank()) {
+                    onSearchActiveChange(false)
+                    onSearchQuery(it)
+                    focusManager.clearFocus()
+                }
             },
             active = true,
-            onActiveChange = onSearchActiveChange,
-            placeholder = { Text("Search") },
+            onActiveChange = { active -> 
+                if (!active) onSearchActiveChange(false)
+            },
+            placeholder = { Text("Search YouTube") },
             leadingIcon = {
-                IconButton(onClick = { onSearchActiveChange(false) }) {
+                IconButton(onClick = { 
+                    onSearchActiveChange(false)
+                    onQueryChange("")
+                }) {
                     Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                 }
             },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { onQueryChange("") }) {
+                        Icon(Icons.Default.Close, contentDescription = "Clear")
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth(), // Removed side padding for full width
+            colors = SearchBarDefaults.colors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                inputFieldColors = TextFieldDefaults.colors(
+                    focusedLabelColor = Color.Transparent,
+                    unfocusedLabelColor = Color.Transparent,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                )
+            )
         ) {
+            // Show History and Suggestions here
+            com.github.libretube.test.ui.screens.SearchSuggestionsScreen(
+                viewModel = searchViewModel,
+                onResultSelected = { query, submit ->
+                    onQueryChange(query)
+                    if (submit) {
+                        onSearchActiveChange(false)
+                        onSearchQuery(query)
+                        focusManager.clearFocus()
+                    }
+                }
+            )
         }
     } else {
         TopAppBar(
-            title = { Text(stringResource(R.string.app_name)) },
+            title = { 
+                Text(
+                    text = if (currentRoute?.startsWith(Routes.Search.split("?")[0]) == true && currentQuery != null) {
+                        currentQuery
+                    } else {
+                        stringResource(R.string.app_name)
+                    },
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                ) 
+            },
             actions = {
-                IconButton(onClick = { onSearchActiveChange(true) }) {
+                IconButton(onClick = { 
+                    onSearchActiveChange(true)
+                    // Prefill with current query if on search screen, otherwise clear
+                    if (currentRoute?.startsWith(Routes.Search.split("?")[0]) == true) {
+                        onQueryChange(currentQuery ?: "")
+                    } else {
+                        onQueryChange("")
+                    }
+                }) {
                     Icon(Icons.Default.Search, contentDescription = "Search")
                 }
                 IconButton(onClick = onSettingsClick) {
                     Icon(Icons.Default.Settings, contentDescription = "Settings")
                 }
-            }
+            },
+            scrollBehavior = scrollBehavior,
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
         )
     }
 }
 
+
+
+
 @Composable
 fun MainBottomNavigation(navController: NavController, currentRoute: String?) {
     val items = listOf(
-        Triple(com.github.libretube.test.ui.navigation.Routes.Home, R.string.startpage, R.drawable.ic_home),
-        Triple(com.github.libretube.test.ui.navigation.Routes.Trends, R.string.trending, R.drawable.ic_trending),
-        Triple(com.github.libretube.test.ui.navigation.Routes.Subscriptions, R.string.subscriptions, R.drawable.ic_subscriptions),
-        Triple(com.github.libretube.test.ui.navigation.Routes.Library, R.string.library, R.drawable.ic_library)
+        NavigationItem(
+            route = com.github.libretube.test.ui.navigation.Routes.Home,
+            titleRes = R.string.startpage,
+            selectedIcon = Icons.Filled.Home,
+            unselectedIcon = Icons.Outlined.Home
+        ),
+        NavigationItem(
+            route = com.github.libretube.test.ui.navigation.Routes.Trends,
+            titleRes = R.string.trending,
+            selectedIcon = Icons.Filled.Whatshot,
+            unselectedIcon = Icons.Outlined.Whatshot
+        ),
+        NavigationItem(
+            route = com.github.libretube.test.ui.navigation.Routes.Subscriptions,
+            titleRes = R.string.subscriptions,
+            selectedIcon = Icons.Filled.Subscriptions,
+            unselectedIcon = Icons.Outlined.Subscriptions
+        ),
+        NavigationItem(
+            route = com.github.libretube.test.ui.navigation.Routes.Library,
+            titleRes = R.string.library,
+            selectedIcon = Icons.Filled.VideoLibrary,
+            unselectedIcon = Icons.Outlined.VideoLibrary
+        )
     )
-
-    NavigationBar {
-        items.forEach { (route, titleRes, iconRes) ->
-            NavigationBarItem(
-                icon = { Icon(painterResource(iconRes), contentDescription = stringResource(titleRes)) },
-                label = { Text(stringResource(titleRes)) },
-                selected = currentRoute == route,
-                onClick = {
-                    navController.navigate(route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                }
-            )
-        }
-    }
+    
+    FloatingBottomNavigation(
+        navController = navController,
+        currentRoute = currentRoute,
+        items = items,
+        // modifier = Modifier.align(Alignment.BottomCenter) // Already aligned by parent Box
+    )
 }
 
+data class NavigationItem(
+    val route: String,
+    val titleRes: Int,
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : BaseActivity() {
 
     // registering for activity results
@@ -219,6 +312,66 @@ class MainActivity : BaseActivity() {
             LibreTubeTheme {
                 val playerViewModel: PlayerViewModel = viewModels<PlayerViewModel>().value
                 val updateViewModel: com.github.libretube.test.ui.models.UpdateViewModel = viewModels<com.github.libretube.test.ui.models.UpdateViewModel>().value
+                
+                // MediaController Connection
+                val context = LocalContext.current
+                DisposableEffect(Unit) {
+                    val sessionToken = androidx.media3.session.SessionToken(
+                        context,
+                        android.content.ComponentName(context, com.github.libretube.test.services.OnlinePlayerService::class.java)
+                    )
+                    val controllerFuture = androidx.media3.session.MediaController.Builder(context, sessionToken).buildAsync()
+                    
+                    controllerFuture.addListener({
+                        val controller = controllerFuture.get()
+                        playerViewModel.setPlayerController(controller)
+                        
+                        // Sync initial state
+                        playerViewModel.updatePlaybackState(
+                            isPlaying = controller.isPlaying,
+                            position = controller.currentPosition,
+                            duration = controller.duration
+                        )
+
+                        // Add listener for real-time updates
+                        controller.addListener(object : androidx.media3.common.Player.Listener {
+                            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                                playerViewModel.updatePlaybackState(
+                                    isPlaying = isPlaying,
+                                    position = controller.currentPosition,
+                                    duration = controller.duration
+                                )
+                            }
+
+                            override fun onPositionDiscontinuity(
+                                oldPosition: androidx.media3.common.Player.PositionInfo,
+                                newPosition: androidx.media3.common.Player.PositionInfo,
+                                reason: Int
+                            ) {
+                                playerViewModel.updatePlaybackState(
+                                    isPlaying = controller.isPlaying,
+                                    position = newPosition.positionMs,
+                                    duration = controller.duration
+                                )
+                            }
+
+                            override fun onPlaybackStateChanged(state: Int) {
+                                playerViewModel.updatePlaybackState(
+                                    isPlaying = controller.isPlaying,
+                                    position = controller.currentPosition,
+                                    duration = controller.duration
+                                )
+                                playerViewModel.updateBufferingState(state == androidx.media3.common.Player.STATE_BUFFERING)
+                            }
+                        })
+                    }, androidx.core.content.ContextCompat.getMainExecutor(context))
+                    
+                    onDispose {
+                        androidx.media3.session.MediaController.releaseFuture(controllerFuture)
+                        playerViewModel.setPlayerController(null)
+                    }
+                }
+
                 navController = rememberNavController()
 
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -312,43 +465,67 @@ class MainActivity : BaseActivity() {
                     )
                 }
 
-                Scaffold(
-                    topBar = {
-                        MainTopAppBar(
-                            isSearchActive = isSearchActive,
-                            searchQuery = searchQuery,
-                            onQueryChange = { searchQuery = it },
-                            onSearchActiveChange = { isSearchActive = it },
-                            onSearchQuery = { query ->
-                                navController.navigate(com.github.libretube.test.ui.navigation.Routes.search(query))
-                            },
-                            onSettingsClick = {
-                                val settingsIntent = Intent(this, SettingsActivity::class.java)
-                                startActivity(settingsIntent)
+                val isPlayerExpanded by playerViewModel.isExpanded.collectAsState()
+                val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Scaffold(
+                        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+                        topBar = {
+                            if (!isPlayerExpanded) {
+                                val searchViewModel: SearchViewModel = viewModel()
+                                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                                val currentQuery = navBackStackEntry?.arguments?.getString("query")
+                                
+                                MainTopAppBar(
+                                    isSearchActive = isSearchActive,
+                                    searchQuery = searchQuery,
+                                    onQueryChange = { searchQuery = it; searchViewModel.setQuery(it) },
+                                    onSearchActiveChange = { active -> 
+                                        isSearchActive = active
+                                        if (active) {
+                                            searchViewModel.setQuery(searchQuery)
+                                        }
+                                    },
+                                    onSearchQuery = { query ->
+                                        // Use standard navigate to maintain backstack correctly
+                                        navController.navigate(com.github.libretube.test.ui.navigation.Routes.search(query))
+                                    },
+                                    onSettingsClick = {
+                                        val settingsIntent = Intent(this@MainActivity, SettingsActivity::class.java)
+                                        startActivity(settingsIntent)
+                                    },
+                                    scrollBehavior = scrollBehavior,
+                                    searchViewModel = searchViewModel,
+                                    currentRoute = currentRoute,
+                                    currentQuery = currentQuery
+                                )
                             }
-                        )
-                    },
-                    bottomBar = {
-                        if (currentRoute in listOf(
-                            com.github.libretube.test.ui.navigation.Routes.Home,
-                            com.github.libretube.test.ui.navigation.Routes.Trends,
-                            com.github.libretube.test.ui.navigation.Routes.Subscriptions,
-                            com.github.libretube.test.ui.navigation.Routes.Library
-                        )) {
-                            MainBottomNavigation(navController, currentRoute)
-                        }
-                    }
-                ) { padding ->
-                    Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+                        },
+                            // Bottom bar removed from Scaffold to be floating
+                    ) { padding ->
                         com.github.libretube.test.ui.navigation.MainNavigation(
                             navController = navController,
                             playerViewModel = playerViewModel,
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize().padding(if (isPlayerExpanded) PaddingValues(0.dp) else padding),
+                            // Pass extra bottom padding for floating nav
+                            contentPadding = if (!isPlayerExpanded) PaddingValues(bottom = 100.dp) else PaddingValues(0.dp)
                         )
+                    }
 
-                        if (!isQueueEmpty) {
-                            playerContent()
+                    if (!isPlayerExpanded && currentRoute in listOf(
+                        com.github.libretube.test.ui.navigation.Routes.Home,
+                        com.github.libretube.test.ui.navigation.Routes.Trends,
+                        com.github.libretube.test.ui.navigation.Routes.Subscriptions,
+                        com.github.libretube.test.ui.navigation.Routes.Library
+                    )) {
+                        Box(modifier = Modifier.align(Alignment.BottomCenter)) {
+                            MainBottomNavigation(navController, currentRoute)
                         }
+                    }
+
+                    if (!isQueueEmpty) {
+                        playerContent()
                     }
                 }
             }
@@ -491,12 +668,19 @@ class MainActivity : BaseActivity() {
         // Fix: Implement PiP Logic
         val playerViewModel: PlayerViewModel by viewModels()
         if (playerViewModel.isPlaying.value && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            playerViewModel.setIsInPip(true)
             // Check if PiP is supported and allowed
              val params = android.app.PictureInPictureParams.Builder()
                 .setAspectRatio(android.util.Rational(16, 9))
                 .build()
              enterPictureInPictureMode(params)
         }
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: android.content.res.Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        val playerViewModel: PlayerViewModel by viewModels()
+        playerViewModel.setIsInPip(isInPictureInPictureMode)
     }
 
     override fun onNewIntent(intent: Intent) {

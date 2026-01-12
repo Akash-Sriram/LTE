@@ -1,4 +1,6 @@
 package com.github.libretube.test.ui.components
+ 
+import androidx.compose.ui.Modifier
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Icon
@@ -8,13 +10,29 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
 
 @Composable
-fun ActionButton(icon: ImageVector, label: String, onClick: () -> Unit = {}) {
-    androidx.compose.material3.IconButton(onClick = onClick) {
+fun ActionButton(
+    icon: ImageVector, 
+    label: String, 
+    modifier: Modifier = Modifier,
+    tint: Color = MaterialTheme.colorScheme.onSurface,
+    onClick: () -> Unit = {}
+) {
+    androidx.compose.material3.IconButton(
+        onClick = onClick,
+        modifier = modifier
+    ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(icon, contentDescription = label, tint = Color.White)
-            Text(label, color = Color.White, style = MaterialTheme.typography.labelSmall)
+            Icon(icon, contentDescription = label, tint = tint)
+            Text(
+                text = label, 
+                color = MaterialTheme.colorScheme.onSurface, 
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

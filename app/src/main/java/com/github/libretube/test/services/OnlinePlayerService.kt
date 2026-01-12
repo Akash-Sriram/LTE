@@ -137,6 +137,8 @@ open class OnlinePlayerService : AbstractPlayerService() {
         // start loading the video info while keeping a reference to the job
         // so that it can be canceled once a different video is loaded
         fetchVideoInfoJob = scope.launch {
+            if (videoId.isEmpty()) return@launch
+
             streams = withContext(Dispatchers.IO) {
                 try {
                     MediaServiceRepository.instance.getStreams(videoId)

@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.github.libretube.test.R
 import com.github.libretube.test.ui.theme.LibreTubeTheme
@@ -56,7 +57,7 @@ fun VideoCard(
     onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    Column(
         modifier = modifier
             .fillMaxWidth()
             .then(
@@ -66,15 +67,16 @@ fun VideoCard(
                     Modifier.clickable(onClick = onClick)
                 }
             )
-            .padding(vertical = 8.dp, horizontal = 12.dp) // ItemRow style padding aprox
+            .padding(bottom = 16.dp) // Spacing between items
     ) {
-        // Thumbnail Section (45% width approx, but let's use weight)
+        // Thumbnail Section - 16:9 aspect ratio with Large rounded corners
         Box(
             modifier = Modifier
-                .weight(0.45f)
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp) // Inset thumbnail
                 .aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color.Black) // Placeholder
+                .clip(MaterialTheme.shapes.large) // 24dp rounded corners
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             AsyncImage(
                 model = com.github.libretube.test.util.rememberContentWithCrossfade(state.thumbnailUrl),
@@ -83,17 +85,20 @@ fun VideoCard(
                 modifier = Modifier.matchParentSize()
             )
 
-            // Duration Badge
+            // Duration Badge - Pill shape
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(4.dp)
-                    .background(Color(0xAA000000), RoundedCornerShape(4.dp))
-                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                    .padding(8.dp)
+                    .background(
+                        color = Color.Black.copy(alpha = 0.7f), 
+                        shape = RoundedCornerShape(6.dp)
+                    )
+                    .padding(horizontal = 6.dp, vertical = 3.dp)
             ) {
                 Text(
                     text = state.duration,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                     color = Color.White
                 )
             }
@@ -107,61 +112,58 @@ fun VideoCard(
                         .height(3.dp)
                         .align(Alignment.BottomCenter),
                     color = MaterialTheme.colorScheme.primary,
-                    trackColor = Color.Transparent
+                    trackColor = Color.White.copy(alpha = 0.3f),
+                    drawStopIndicator = {}
                 )
             }
         }
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Info Section
-        Column(
+        Row(
             modifier = Modifier
-                .weight(0.55f)
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp) // Align with thumbnail inset
         ) {
-            Text(
-                text = state.title,
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            // Channel Avatar
+            if (!state.uploaderAvatarUrl.isNullOrEmpty()) {
+                AsyncImage(
+                    model = com.github.libretube.test.util.rememberContentWithCrossfade(state.uploaderAvatarUrl),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(40.dp) // Larger avatar
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+            }
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = state.views,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Channel Info
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (state.uploaderAvatarUrl != null) {
-                    AsyncImage(
-                        model = com.github.libretube.test.util.rememberContentWithCrossfade(state.uploaderAvatarUrl),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentScale = ContentScale.Crop
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-                
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = state.uploaderName,
-                    style = MaterialTheme.typography.labelMedium,
+                    text = state.title,
+                    style = MaterialTheme.typography.titleMedium.copy( // Bolder title
+                        fontWeight = FontWeight.SemiBold,
+                        lineHeight = 22.sp
+                    ),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "${state.uploaderName} • ${state.views}",
+                    style = MaterialTheme.typography.bodyMedium, // Larger metadata
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
+            
+            // Optional: Menu icon (3 dots) could go here if needed
         }
     }
 }

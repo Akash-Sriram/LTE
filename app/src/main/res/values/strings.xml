@@ -42,7 +42,6 @@
     <string name="location">Location</string>
     <string name="customization">Adjustments</string>
     <string name="website">Website</string>
-    <string name="donate">Donate</string>
     <string name="uploaderAndVideoCount">%1$s • %2$d videos</string>
     <string name="subscriberAndVideoCounts">%1$s subscribers • %2$d videos</string>
     <string name="videoCount">%1$d videos</string>
@@ -57,6 +56,7 @@
     <string name="playlists">Playlists</string>
     <string name="okay">OK</string>
     <string name="finished">Finished</string>
+    <string name="filter_list">Filter</string>
     <string name="history">History</string>
     <string name="search_history">Search history</string>
     <string name="clear_history">Clear history</string>
@@ -622,4 +622,24 @@
     <string name="matrix">Matrix</string>
     <string name="mastodon">Mastodon</string>
     <string name="lemmy">Lemmy</string>
+    
+    <!-- New Settings Strings -->
+    <string name="system_caption_style_summary">Use system default caption style</string>
+    <string name="default_video_quality">Default video quality</string>
+    <string name="default_video_quality_summary">Preferred quality for video playback</string>
+    <string name="external_downloader">External downloader package</string>
+    <string name="external_downloader_summary">Package name of external download app (e.g., com.junkfood.seal)</string>
+    <string name="external_provider">External Provider</string>
+    <string name="quality_defaults">Quality Defaults</string>
+    <string name="default_download_video_quality">Default download video quality</string>
+    <string name="default_download_audio_quality">Default download audio quality</string>
+    <string name="data_bandwidth">Data &amp; Bandwidth</string>
+    <string name="bandwidth_saver">Bandwidth saver</string>
+    <string name="bandwidth_saver_summary">Skip loading thumbnails and images to save data</string>
+    <string name="auto_update_checks">Automatic update checks</string>
+    <string name="auto_update_checks_summary">Periodically check for app updates</string>
+    <string name="extended_debug_logging">Extended debug logging</string>
+    <string name="extended_debug_logging_summary">Enable detailed logging for troubleshooting</string>
+    <string name="clear_cache">Clear cache</string>
+    <string name="clear_cache_summary">Clear all cached images and data</string>
 </resources>

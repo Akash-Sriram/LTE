@@ -25,7 +25,8 @@ import com.github.libretube.test.ui.models.PlayerViewModel
 @Composable
 fun CommentsSection(
     viewModel: PlayerViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onViewAllClick: () -> Unit = {}
 ) {
     val comments by viewModel.comments.collectAsState()
 
@@ -38,7 +39,7 @@ fun CommentsSection(
         ) {
             Text(
                 text = "Comments",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium
             )
@@ -46,7 +47,7 @@ fun CommentsSection(
             if (comments.isNotEmpty()) {
                 Text(
                     text = "${comments.size}",
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -58,12 +59,12 @@ fun CommentsSection(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color.White.copy(alpha = 0.1f))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                     .padding(16.dp)
             ) {
                 Text(
                     text = "No comments available",
-                    color = Color.LightGray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -79,7 +80,7 @@ fun CommentsSection(
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .clickable { /* TODO: Open comments sheet */ },
+                    .clickable { onViewAllClick() },
                 style = MaterialTheme.typography.labelLarge
             )
         }
@@ -112,7 +113,7 @@ fun CommentCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = comment.author,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -123,7 +124,7 @@ fun CommentCard(
             
             Text(
                 text = comment.commentText ?: "",
-                color = Color.LightGray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis

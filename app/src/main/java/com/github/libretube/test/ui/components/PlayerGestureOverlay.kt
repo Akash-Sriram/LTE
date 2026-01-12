@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalView
 fun PlayerGestureOverlay(
     modifier: Modifier = Modifier,
     onSeek: (Long) -> Unit,
+    onTap: () -> Unit = {},
     enabled: Boolean = true
 ) {
     if (!enabled) return
@@ -34,6 +35,7 @@ fun PlayerGestureOverlay(
             .fillMaxSize()
             .pointerInput(Unit) {
                 detectTapGestures(
+                    onTap = { onTap() },
                     onDoubleTap = { offset ->
                         // Double tap to seek: left side = -10s, right side = +10s
                         val screenWidth = size.width
@@ -74,7 +76,7 @@ fun PlayerGestureOverlay(
                             val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
                             
                             // Negative dragAmount = swipe up = increase volume
-                            val volumeChange = (-dragAmount / 10f).toInt()
+                            val volumeChange = (-dragAmount / 40f).toInt() // Increased divisor for more precision
                             val newVolume = (currentVolume + volumeChange).coerceIn(0, maxVolume)
                             
                             audioManager.setStreamVolume(
@@ -90,7 +92,7 @@ fun PlayerGestureOverlay(
                                 val currentBrightness = layoutParams.screenBrightness
                                 
                                 // Negative dragAmount = swipe up = increase brightness
-                                val brightnessChange = -dragAmount / 1000f
+                                val brightnessChange = -dragAmount / 2000f // Increased divisor for more precision
                                 val newBrightness = (currentBrightness + brightnessChange).coerceIn(0f, 1f)
                                 
                                 layoutParams.screenBrightness = newBrightness

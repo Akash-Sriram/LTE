@@ -21,10 +21,10 @@ fun VideoSurface(
     gesturesEnabled: Boolean = true
 ) {
     val playerController by viewModel.playerController.collectAsState()
-
+    val resizeMode by viewModel.resizeMode.collectAsState()
     val isBuffering by viewModel.isBuffering.collectAsState()
 
-    Box(modifier = modifier.background(Color.Black).fillMaxSize(), contentAlignment = Alignment.Center) {
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
         AndroidView(
             factory = { context ->
                 androidx.media3.ui.PlayerView(context).apply {
@@ -40,6 +40,7 @@ fun VideoSurface(
                     // Attaching player to view
                     view.player = playerController
                 }
+                view.resizeMode = resizeMode
             },
             onRelease = { view ->
                 view.player = null // Only detach, don't release singleton player
@@ -54,7 +55,8 @@ fun VideoSurface(
                     val currentPosition = viewModel.currentPosition.value
                     val newPosition = (currentPosition + seekAmount).coerceAtLeast(0)
                     viewModel.seekTo(newPosition)
-                }
+                },
+                onTap = { viewModel.toggleControls() }
             )
         }
         if (isBuffering) {

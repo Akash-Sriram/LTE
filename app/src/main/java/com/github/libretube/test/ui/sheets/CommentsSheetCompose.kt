@@ -28,7 +28,7 @@ fun CommentsSheetCompose(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.7f) // Occupy 70% of screen height
+                .fillMaxHeight(0.9f) // Occupy 90% of screen height
         ) {
             // Header
             Row(

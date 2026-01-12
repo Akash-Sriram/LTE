@@ -16,7 +16,6 @@ import com.github.libretube.test.ui.theme.LibreTubeTheme
 
 @Composable
 fun AboutScreen(
-    onDonateClick: () -> Unit,
     onWebsiteClick: () -> Unit,
     onTranslateClick: () -> Unit,
     onGithubClick: () -> Unit,
@@ -29,11 +28,6 @@ fun AboutScreen(
             .verticalScroll(rememberScrollState())
     ) {
         // We can reuse SettingItemRow-like structure or specialized LinkItem
-        LinkItem(
-            title = stringResource(R.string.donate),
-            icon = R.drawable.ic_donate, 
-            onClick = onDonateClick
-        )
         LinkItem(
             title = stringResource(R.string.website),
             icon = R.drawable.ic_info, // Generic info icon

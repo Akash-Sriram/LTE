@@ -144,10 +144,10 @@ object DownloadHelper {
                         FileType.SUBTITLE -> SUBTITLE_DIR
                         else -> VIDEO_DIR
                     }
-                    val privateFile = File(context.getExternalFilesDir(null), "$subFolder/${item.fileName}")
-                    if (privateFile.exists()) {
-                         val privDeleted = privateFile.delete()
-                         com.github.libretube.logger.FileLogger.d("DownloadHelper", "Fallback: Deleted private file ${privateFile.absolutePath}: $privDeleted")
+                    val fallbackFile = getDownloadDir(context, subFolder).resolve(item.fileName).toFile()
+                    if (fallbackFile.exists()) {
+                         val fallbackDeleted = fallbackFile.delete()
+                         com.github.libretube.logger.FileLogger.d("DownloadHelper", "Fallback: Deleted file ${fallbackFile.absolutePath}: $fallbackDeleted")
                     }
                 }
             } catch (e: Exception) {

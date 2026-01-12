@@ -22,7 +22,6 @@ import kotlinx.coroutines.launch
 
 import com.github.libretube.test.ui.components.VideoSurface
 import com.github.libretube.test.ui.components.DraggablePlayerPanel
-import com.github.libretube.test.ui.components.DraggablePlayerPanel
 import com.github.libretube.test.ui.sheets.QueueSheet
 import com.github.libretube.test.ui.sheets.ChaptersSheet
 import com.github.libretube.test.ui.sheets.PlayerSettingsSheet
@@ -30,6 +29,13 @@ import com.github.libretube.test.ui.sheets.QualitySelectionSheet
 import com.github.libretube.test.ui.sheets.SubtitleSelectionSheet
 import com.github.libretube.test.ui.sheets.AudioTrackSelectionSheet
 import com.github.libretube.test.ui.sheets.VideoOptionsSheet
+import com.github.libretube.test.ui.sheets.DownloadBottomSheet
+import com.github.libretube.test.ui.sheets.ShareBottomSheet
+import com.github.libretube.test.enums.ShareObjectType
+import android.content.Intent
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import android.app.Activity
 
 enum class PlayerState {
     Collapsed,
@@ -42,14 +48,26 @@ fun PlayerScreen(
     playerViewModel: PlayerViewModel,
     onClose: () -> Unit
 ) {
+    com.github.libretube.test.ui.theme.LibreTubeTheme {
+        PlayerScreenContent(playerViewModel, onClose)
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@Composable
+private fun PlayerScreenContent(
+    playerViewModel: PlayerViewModel,
+    onClose: () -> Unit
+) {
     val density = LocalDensity.current
     val configuration = LocalConfiguration.current
     val screenHeightPx = LocalContext.current.resources.displayMetrics.heightPixels.toFloat()
     
     // AnchoredDraggable State
-    val anchors = remember(configuration) {
+    val anchors = remember(configuration, screenHeightPx) {
         DraggableAnchors {
-            PlayerState.Collapsed at (screenHeightPx - with(density) { 60.dp.toPx() }) // Mini player height
+            // Offset Collapsed anchor by approx (80dp miniplayer + 80dp bottom nav)
+            PlayerState.Collapsed at (screenHeightPx - with(density) { 160.dp.toPx() }) 
             PlayerState.Expanded at 0f
         }
     }
@@ -58,9 +76,12 @@ fun PlayerScreen(
         AnchoredDraggableState(
             initialValue = PlayerState.Collapsed,
             anchors = anchors,
-            positionalThreshold = { distance: Float -> distance * 0.5f },
-            velocityThreshold = { with(density) { 100.dp.toPx() } },
-            snapAnimationSpec = tween(),
+            positionalThreshold = { distance: Float -> distance * 0.7f }, // Higher threshold to avoid accidental swipes
+            velocityThreshold = { with(density) { 200.dp.toPx() } }, // Higher velocity threshold
+            snapAnimationSpec = androidx.compose.animation.core.spring(
+                dampingRatio = androidx.compose.animation.core.Spring.DampingRatioLowBouncy,
+                stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+            ),
             decayAnimationSpec = exponentialDecay(),
             confirmValueChange = { true }
         )
@@ -76,8 +97,8 @@ fun PlayerScreen(
 
     // Movable Player Surface to prevent re-inflation
     val movableVideoSurface = remember(playerViewModel) {
-        movableContentOf { modifier: Modifier ->
-            VideoSurface(modifier = modifier, viewModel = playerViewModel)
+        movableContentOf { modifier: Modifier, gesturesEnabled: Boolean ->
+            VideoSurface(modifier = modifier, viewModel = playerViewModel, gesturesEnabled = gesturesEnabled)
         }
     }
 
@@ -93,6 +114,29 @@ fun PlayerScreen(
         }
     }
 
+    // System Bars Theme Synchronization
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        val window = (view.context as Activity).window
+        val isExpanded = draggableState.currentValue == PlayerState.Expanded
+        val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
+        
+        SideEffect {
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+            val insetsController = WindowCompat.getInsetsController(window, view)
+            
+            // isAppearanceLightStatusBars = true means DARK icons on LIGHT background
+            // we want DARK icons in light mode when NOT expanded
+            insetsController.isAppearanceLightStatusBars = !isSystemDark && !isExpanded
+            insetsController.isAppearanceLightNavigationBars = !isSystemDark && !isExpanded
+        }
+        
+        // Update PlayerViewModel expansion state for MainActivity to hide/show BottomNav
+        LaunchedEffect(isExpanded) {
+            playerViewModel.setExpanded(isExpanded)
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -103,27 +147,84 @@ fun PlayerScreen(
         
         var showQueue by remember { mutableStateOf(false) }
         var showChapters by remember { mutableStateOf(false) }
-        var showSettings by remember { mutableStateOf(false) }
         var showQuality by remember { mutableStateOf(false) }
         var showCaptions by remember { mutableStateOf(false) }
         var showSleepTimer by remember { mutableStateOf(false) }
         var showStats by remember { mutableStateOf(false) }
         var showAudioTracks by remember { mutableStateOf(false) }
         var showVideoOptions by remember { mutableStateOf(false) }
+        var videoOptionsInitialScreen by remember { mutableStateOf("MAIN") }
+        var showDownloadSheet by remember { mutableStateOf(false) }
+        var showShareSheet by remember { mutableStateOf(false) }
 
-        DraggablePlayerPanel(
-            state = draggableState,
-            onClose = onClose,
-            viewModel = playerViewModel,
-            videoSurface = movableVideoSurface,
-            onQueueClick = { showQueue = true },
-            onChaptersClick = { showChapters = true },
+        // Action Command Handling
+        val context = LocalContext.current
+        LaunchedEffect(playerViewModel) {
+            playerViewModel.playerCommandTrigger.collect { command ->
+                when (command) {
+                    is com.github.libretube.test.ui.models.PlayerCommandEvent.Share -> {
+                        showShareSheet = true
+                    }
+                    is com.github.libretube.test.ui.models.PlayerCommandEvent.Download -> {
+                        showDownloadSheet = true
+                    }
+                    is com.github.libretube.test.ui.models.PlayerCommandEvent.SaveToPlaylist -> {
+                        showVideoOptions = true
+                        videoOptionsInitialScreen = "ADD_TO_PLAYLIST"
+                    }
+                    is com.github.libretube.test.ui.models.PlayerCommandEvent.Bookmark -> {
+                        // Handled in MetadataSection via ViewModel toggle for now
+                        // If we want a separate BookmarkSheet, add it here
+                    }
+                    else -> Unit
+                }
+            }
+        }
 
-            onSettingsClick = { showSettings = true },
-            onVideoOptionsClick = { showVideoOptions = true }
-        )
+        val isInPip by playerViewModel.isInPip.collectAsState()
+        val playbackSpeed by playerViewModel.playbackSpeed.collectAsState()
+        val playbackPitch by playerViewModel.playbackPitch.collectAsState()
 
-        if (showQueue) {
+        if (!isInPip) {
+            DraggablePlayerPanel(
+                state = draggableState,
+                onClose = onClose,
+                viewModel = playerViewModel,
+                videoSurface = movableVideoSurface,
+                onChaptersClick = { showChapters = true },
+                onVideoOptionsClick = { 
+                    videoOptionsInitialScreen = "MAIN"
+                    showVideoOptions = true 
+                },
+                onCommentsClick = { playerViewModel.openCommentsSheet() }
+            )
+        } else {
+            // In PIP, only show the video surface filling the panel
+            // We use a simplified version of the draggable panel or just the surface
+            Box(Modifier.fillMaxSize()) {
+                movableVideoSurface(Modifier.fillMaxSize(), true)
+            }
+        }
+
+        val showCommentsSheet by playerViewModel.showCommentsSheet.collectAsState()
+        if (showCommentsSheet && !isInPip) {
+            val commentsViewModel: com.github.libretube.test.ui.models.CommentsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+            val currentVideoId = currentStream?.url?.toID()
+            
+            // Re-initialize comments VM if video changed
+            LaunchedEffect(currentVideoId) {
+                currentVideoId?.let { 
+                    commentsViewModel.videoIdLiveData.value = it 
+                }
+            }
+
+            com.github.libretube.test.ui.sheets.CommentsSheetCompose(
+                viewModel = commentsViewModel,
+                onDismiss = { playerViewModel.closeCommentsSheet() }
+            )
+        }
+
+        if (showQueue && !isInPip) {
             QueueSheet(
                 queue = queue,
                 onItemClick = { item -> 
@@ -134,7 +235,7 @@ fun PlayerScreen(
             )
         }
 
-        if (showChapters) {
+        if (showChapters && !isInPip) {
             ChaptersSheet(
                 chapters = chapters,
                 onChapterClick = { chapter ->
@@ -145,58 +246,38 @@ fun PlayerScreen(
             )
         }
 
-        if (showSettings) {
-            PlayerSettingsSheet(
+
+        if (showVideoOptions && !isInPip) {
+            com.github.libretube.test.ui.sheets.ConsolidatedOptionsSheet(
                 viewModel = playerViewModel,
-                onDismissRequest = { showSettings = false },
-                onQualityClick = { 
-                    showSettings = false
+                onDismissRequest = { 
+                    showVideoOptions = false
+                },
+                onQualityClick = {
                     showQuality = true
                 },
                 onCaptionsClick = {
-                    showSettings = false
                     showCaptions = true
                 },
                 onAudioTrackClick = {
-                    showSettings = false
                     showAudioTracks = true
                 },
                 onSleepTimerClick = {
-                    showSettings = false
                     showSleepTimer = true
                 },
                 onStatsClick = {
-                    showSettings = false
                     showStats = true
                 }
             )
         }
 
-        if (showVideoOptions) {
-            val currentStreamItem = currentStream
-            if (currentStreamItem != null) {
-                com.github.libretube.test.ui.sheets.VideoOptionsSheet(
-                    streamItem = currentStreamItem,
-                    onDismissRequest = { showVideoOptions = false },
-                    onShareClick = {
-                        showVideoOptions = false
-                        playerViewModel.triggerPlayerCommand(com.github.libretube.test.ui.models.PlayerCommandEvent.Share)
-                    },
-                    onDownloadClick = {
-                        showVideoOptions = false
-                        playerViewModel.triggerPlayerCommand(com.github.libretube.test.ui.models.PlayerCommandEvent.Download)
-                    }
-                )
-            }
-        }
-
-        if (showSleepTimer) {
+        if (showSleepTimer && !isInPip) {
              com.github.libretube.test.ui.sheets.SleepTimerSheetCompose(
                  onDismiss = { showSleepTimer = false }
              )
         }
 
-        if (showStats) {
+        if (showStats && !isInPip) {
             val currentStream by playerViewModel.currentStream.collectAsState()
             val stats = remember(currentStream) {
                 VideoStats(
@@ -212,7 +293,7 @@ fun PlayerScreen(
             )
         }
 
-        if (showQuality) {
+        if (showQuality && !isInPip) {
             playerViewModel.playerController.value?.let { controller ->
                 QualitySelectionSheet(
                     player = controller,
@@ -221,7 +302,7 @@ fun PlayerScreen(
             }
         }
 
-        if (showCaptions) {
+        if (showCaptions && !isInPip) {
             playerViewModel.playerController.value?.let { controller ->
                 SubtitleSelectionSheet(
                     player = controller,
@@ -230,11 +311,36 @@ fun PlayerScreen(
             }
         }
 
-        if (showAudioTracks) {
+        if (showAudioTracks && !isInPip) {
             playerViewModel.playerController.value?.let { controller ->
                 AudioTrackSelectionSheet(
                     player = controller,
                     onDismiss = { showAudioTracks = false }
+                )
+            }
+        }
+
+
+
+        if (showDownloadSheet && !isInPip) {
+            val videoId = currentStream?.url?.toID()
+            if (videoId != null) {
+                DownloadBottomSheet(
+                    videoId = videoId,
+                    onDismissRequest = { showDownloadSheet = false }
+                )
+            }
+        }
+
+        if (showShareSheet && !isInPip) {
+            val videoId = currentStream?.url?.toID()
+            if (videoId != null) {
+                ShareBottomSheet(
+                    id = videoId,
+                    title = currentStream?.title ?: "",
+                    shareObjectType = ShareObjectType.VIDEO,
+                    initialTimestamp = "0",
+                    onDismissRequest = { showShareSheet = false }
                 )
             }
         }

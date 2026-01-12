@@ -99,6 +99,14 @@ object DatabaseHolder {
         }
     }
 
+    private val MIGRATION_30_31 = object : Migration(30, 31) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+             db.execSQL("ALTER TABLE 'watchHistoryItem' ADD COLUMN 'watchedAt' INTEGER NOT NULL DEFAULT 0")
+             db.execSQL("ALTER TABLE 'watchHistoryItem' ADD COLUMN 'position' INTEGER NOT NULL DEFAULT 0")
+             db.execSQL("CREATE INDEX IF NOT EXISTS `index_watchHistoryItem_watchedAt` ON `watchHistoryItem` (`watchedAt`)")
+        }
+    }
+
     private var _database: AppDatabase? = null
 
     val Database: AppDatabase
@@ -119,7 +127,8 @@ object DatabaseHolder {
                             MIGRATION_26_27,
                             MIGRATION_27_28,
                             MIGRATION_28_29,
-                            MIGRATION_29_30
+                            MIGRATION_29_30,
+                            MIGRATION_30_31
                         )
                         .fallbackToDestructiveMigration()
                         .build()

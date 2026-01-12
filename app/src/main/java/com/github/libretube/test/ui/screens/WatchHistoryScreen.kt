@@ -272,7 +272,7 @@ fun WatchHistorySwipeItem(
                         videoId = item.videoId,
                         title = item.title ?: "",
                         uploaderName = item.uploader ?: "",
-                        views = "", 
+                        views = if (item.watchedAt > 0) DateUtils.getRelativeTimeSpanString(item.watchedAt).toString() else "", 
                         duration = item.duration?.let { DateUtils.formatElapsedTime(it) } ?: "",
                         thumbnailUrl = item.thumbnailUrl ?: "",
                         uploaderAvatarUrl = item.uploaderAvatar

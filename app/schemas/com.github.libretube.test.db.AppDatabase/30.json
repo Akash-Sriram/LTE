@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 30,
-    "identityHash": "7ad7f2e3a70dc070b7f303f6858bb4d2",
+    "identityHash": "a1db414afb2266e8a0ce46ceaf5ad6cf",
     "entities": [
       {
         "tableName": "watchHistoryItem",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`videoId` TEXT NOT NULL, `title` TEXT, `uploadDate` TEXT, `uploader` TEXT, `uploaderUrl` TEXT, `uploaderAvatar` TEXT, `thumbnailUrl` TEXT, `duration` INTEGER, `isShort` INTEGER NOT NULL, PRIMARY KEY(`videoId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`videoId` TEXT NOT NULL, `title` TEXT, `uploadDate` TEXT, `uploader` TEXT, `uploaderUrl` TEXT, `uploaderAvatar` TEXT, `thumbnailUrl` TEXT, `duration` INTEGER, `isShort` INTEGER NOT NULL, `watchedAt` INTEGER NOT NULL, `position` INTEGER NOT NULL, PRIMARY KEY(`videoId`))",
         "fields": [
           {
             "fieldPath": "videoId",
@@ -59,6 +59,18 @@
           {
             "fieldPath": "isShort",
             "columnName": "isShort",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "watchedAt",
+            "columnName": "watchedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
             "affinity": "INTEGER",
             "notNull": true
           }
@@ -812,7 +824,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7ad7f2e3a70dc070b7f303f6858bb4d2')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a1db414afb2266e8a0ce46ceaf5ad6cf')"
     ]
   }
 }

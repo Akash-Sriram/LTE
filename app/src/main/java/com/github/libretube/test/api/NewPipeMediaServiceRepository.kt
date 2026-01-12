@@ -3,7 +3,8 @@ package com.github.libretube.test.api
 import com.github.libretube.test.util.DeArrowUtil
 
 import android.util.Base64
-import com.github.libretube.test.api.obj.Channel
+import android.util.Log
+ import com.github.libretube.test.api.obj.Channel
 import com.github.libretube.test.api.obj.ChannelTab
 import com.github.libretube.test.api.obj.ChannelTabResponse
 import com.github.libretube.test.api.obj.ChapterSegment
@@ -37,6 +38,9 @@ import kotlinx.datetime.toKotlinInstant
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import org.schabi.newpipe.extractor.InfoItem
+import org.schabi.newpipe.extractor.NewPipe
+import org.schabi.newpipe.extractor.ServiceList
+import org.schabi.newpipe.extractor.StreamingService
 import org.schabi.newpipe.extractor.Page
 import org.schabi.newpipe.extractor.channel.ChannelInfo
 import org.schabi.newpipe.extractor.channel.ChannelInfoItem
@@ -135,7 +139,7 @@ fun InfoItem.toContentItem() = when (this) {
         thumbnail = thumbnails.maxByOrNull { it.height }?.url.orEmpty(),
         title = name,
         uploaderAvatar = uploaderAvatars.maxByOrNull { it.height }?.url.orEmpty(),
-        uploaderUrl = uploaderUrl.toID(),
+        uploaderUrl = uploaderUrl?.toID(),
         uploaderName = uploaderName,
         uploaded = uploadDate?.offsetDateTime()?.toInstant()?.toEpochMilli() ?: -1,
         isShort = isShortFormContent,
@@ -186,7 +190,7 @@ fun PlaylistInfo.toPlaylist() = Playlist(
     name = name,
     description = description?.content,
     thumbnailUrl = thumbnails.maxByOrNull { it.height }?.url,
-    uploaderUrl = uploaderUrl.toID(),
+    uploaderUrl = uploaderUrl?.toID(),
     bannerUrl = banners.maxByOrNull { it.height }?.url,
     uploader = uploaderName,
     uploaderAvatar = uploaderAvatars.maxByOrNull { it.height }?.url,
@@ -201,7 +205,7 @@ fun CommentsInfoItem.toComment() = Comment(
     commentText = commentText.content,
     commentedTime = textualUploadDate,
     commentedTimeMillis = uploadDate?.offsetDateTime()?.toEpochSecond()?.times(1000),
-    commentorUrl = uploaderUrl.toID(),
+    commentorUrl = uploaderUrl?.toID().orEmpty(),
     hearted = isHeartedByUploader,
     creatorReplied = hasCreatorReply(),
     likeCount = likeCount.toLong(),
@@ -295,7 +299,7 @@ class NewPipeMediaServiceRepository : MediaServiceRepository {
             description = resp.description.content,
             uploader = resp.uploaderName,
             uploaderAvatar = resp.uploaderAvatars.maxBy { it.height }.url,
-            uploaderUrl = resp.uploaderUrl.toID(),
+            uploaderUrl = resp.uploaderUrl?.toID().orEmpty(),
             uploaderVerified = resp.isUploaderVerified,
             uploaderSubscriberCount = resp.uploaderSubscriberCount,
             category = resp.category,
@@ -421,15 +425,19 @@ class NewPipeMediaServiceRepository : MediaServiceRepository {
         }
     }
 
-    override suspend fun getSearchResults(searchQuery: String, filter: String): SearchResult {
+    override suspend fun getSearchResults(searchQuery: String, filter: String): SearchResult = withContext(Dispatchers.IO) {
+        val filters = if (filter == "all") emptyList() else listOf(filter)
+        Log.d("NewPipeRepo", "Fetching search results for query: $searchQuery with filters: $filters")
+        
         val queryHandler = NewPipeExtractorInstance.extractor.searchQHFactory.fromQuery(
             searchQuery,
-            listOf(filter),
+            filters,
             null
         )
         val searchInfo = SearchInfo.getInfo(NewPipeExtractorInstance.extractor, queryHandler)
 
-        return SearchResult(
+        Log.d("NewPipeRepo", "Search returned ${searchInfo.relatedItems.size} items")
+        SearchResult(
             items = DeArrowUtil.deArrowContentItems(searchInfo.relatedItems.mapNotNull { it.toContentItem() }),
             nextpage = searchInfo.nextPage?.toNextPageString(),
             suggestion = searchInfo.searchSuggestion,
@@ -441,10 +449,11 @@ class NewPipeMediaServiceRepository : MediaServiceRepository {
         searchQuery: String,
         filter: String,
         nextPage: String
-    ): SearchResult {
+    ): SearchResult = withContext(Dispatchers.IO) {
+        val filters = if (filter == "all") emptyList() else listOf(filter)
         val queryHandler = NewPipeExtractorInstance.extractor.searchQHFactory.fromQuery(
             searchQuery,
-            listOf(filter),
+            filters,
             null
         )
         val searchInfo = SearchInfo.getMoreItems(
@@ -452,12 +461,13 @@ class NewPipeMediaServiceRepository : MediaServiceRepository {
             queryHandler,
             nextPage.toPage()
         )
-        return SearchResult(
+        SearchResult(
             items = DeArrowUtil.deArrowContentItems(searchInfo.items.mapNotNull { it.toContentItem() }),
-            nextpage = searchInfo.nextPage?.toNextPageString()
+            nextpage = searchInfo.nextPage?.toNextPageString(),
+            suggestion = null,
+            corrected = false
         )
     }
-
     override suspend fun getSuggestions(query: String): List<String> {
         return NewPipeExtractorInstance.extractor.suggestionExtractor.suggestionList(query)
     }

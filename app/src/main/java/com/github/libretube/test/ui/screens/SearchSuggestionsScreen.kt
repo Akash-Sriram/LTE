@@ -40,6 +40,14 @@ fun SearchSuggestionsScreen(
             LazyColumn(
                 modifier = Modifier.fillMaxSize()
             ) {
+                item {
+                    Text(
+                        text = if (searchQuery.isEmpty()) "Recent Searches" else "Suggestions",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
                 items(
                     items = uiSuggestions,
                     key = { it.query }

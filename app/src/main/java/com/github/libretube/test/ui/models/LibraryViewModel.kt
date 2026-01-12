@@ -45,6 +45,17 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     private val _reorderBookmarks = MutableStateFlow<List<PlaylistBookmark>>(emptyList())
     val reorderBookmarks = _reorderBookmarks.asStateFlow()
 
+    private val _currentSort = MutableStateFlow(
+        PreferenceHelper.getString(PreferenceKeys.PLAYLISTS_ORDER, "creation_date") ?: "creation_date"
+    )
+    val currentSort = _currentSort.asStateFlow()
+
+    fun setSortOrder(order: String) {
+        _currentSort.value = order
+        PreferenceHelper.putString(PreferenceKeys.PLAYLISTS_ORDER, order)
+        refreshData()
+    }
+
     fun refreshData() {
         _isRefreshing.value = true
         viewModelScope.launch {

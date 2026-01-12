@@ -22,7 +22,6 @@ class AboutActivity : BaseActivity() {
         setContent {
             LibreTubeTheme {
                 AboutScreen(
-                    onDonateClick = { IntentHelper.openLinkFromHref(this, supportFragmentManager, DONATE_URL) },
                     onWebsiteClick = { IntentHelper.openLinkFromHref(this, supportFragmentManager, WEBSITE_URL) },
                     onTranslateClick = { IntentHelper.openLinkFromHref(this, supportFragmentManager, WEBLATE_URL) },
                     onGithubClick = { IntentHelper.openLinkFromHref(this, supportFragmentManager, GITHUB_URL) },
@@ -68,9 +67,8 @@ class AboutActivity : BaseActivity() {
     }
 
     companion object {
-        const val DONATE_URL = "https://github.com/libre-tube/LibreTube#donate"
         private const val WEBSITE_URL = "https://libretube.dev"
-        const val GITHUB_URL = "https://github.com/libre-tube/LibreTube"
+        const val GITHUB_URL = "https://github.com/Akash-Sriram/lte"
         private const val WEBLATE_URL = "https://hosted.weblate.org/projects/libretube/libretube/"
     }
 }

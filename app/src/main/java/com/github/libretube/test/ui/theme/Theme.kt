@@ -13,6 +13,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.graphics.Color
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
@@ -42,10 +43,10 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = BlueLightPrimary,
-    onPrimary = BlueLightOnPrimary,
-    primaryContainer = BlueLightPrimaryContainer,
-    onPrimaryContainer = BlueLightOnPrimaryContainer,
+    primary = Color(0xFFD32F2F),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFFFEBEE),
+    onPrimaryContainer = Color(0xFFD32F2F),
     secondary = BlueLightSecondary,
     onSecondary = BlueLightOnSecondary,
     secondaryContainer = BlueLightSecondaryContainer,
@@ -58,12 +59,12 @@ private val LightColorScheme = lightColorScheme(
     errorContainer = BlueLightErrorContainer,
     onError = BlueLightOnError,
     onErrorContainer = BlueLightOnErrorContainer,
-    background = BlueLightBackground,
-    onBackground = BlueLightOnBackground,
-    surface = BlueLightSurface,
-    onSurface = BlueLightOnSurface,
-    surfaceVariant = BlueLightSurfaceVariant,
-    onSurfaceVariant = BlueLightOnSurfaceVariant,
+    background = Color(0xFFFFFFFF),
+    onBackground = Color(0xFF000000),
+    surface = Color(0xFFFFFFFF),
+    onSurface = Color(0xFF000000),
+    surfaceVariant = Color(0xFFFFFFFF),
+    onSurfaceVariant = Color(0xFF404040),
     outline = BlueLightOutline
 )
 
@@ -87,14 +88,17 @@ fun LibreTubeTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
+            window.statusBarColor = colorScheme.background.toArgb()
+            window.navigationBarColor = colorScheme.background.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !darkTheme
         }
     }
 
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
+        shapes = Shapes,
         content = content
     )
 }

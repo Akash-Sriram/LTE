@@ -1,6 +1,7 @@
 package com.github.libretube.test.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -25,35 +26,32 @@ fun MiniPlayer(
     isPlaying: Boolean = false,
     progress: Float = 0f,
     onPlayPauseClick: () -> Unit = {},
+    onClick: () -> Unit = {},
     onClose: () -> Unit
 ) {
-    Column(modifier = modifier) {
+    Column(
+        modifier = modifier
+            .clickable { onClick() }
+    ) {
         // Progress bar at top
         if (progress > 0f) {
             LinearProgressIndicator(
                 progress = { progress },
                 modifier = Modifier.fillMaxWidth().height(2.dp),
                 color = MaterialTheme.colorScheme.primary,
+                trackColor = Color.Transparent
             )
         }
         
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 4.dp, vertical = 4.dp), // Reduced horizontal padding
+                .padding(horizontal = 12.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Thumbnail
-            AsyncImage(
-                model = thumbnailUrl,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(width = 56.dp, height = 31.5.dp) // 16:9 ratio
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Color.DarkGray)
-            )
-
+            // Video surface provides the thumbnail via DraggablePlayerPanel
+            
             // Metadata column
             Column(
                 modifier = Modifier.weight(1f),
@@ -63,6 +61,7 @@ fun MiniPlayer(
                     Text(
                         text = title,
                         style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
@@ -81,13 +80,18 @@ fun MiniPlayer(
             IconButton(onClick = onPlayPauseClick) {
                 Icon(
                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = if (isPlaying) "Pause" else "Play"
+                    contentDescription = if (isPlaying) "Pause" else "Play",
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
             }
             
             // Close button
             IconButton(onClick = onClose) {
-                Icon(Icons.Default.Close, contentDescription = "Close")
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
             }
         }
     }

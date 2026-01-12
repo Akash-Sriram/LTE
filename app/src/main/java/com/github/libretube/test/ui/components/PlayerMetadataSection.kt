@@ -32,8 +32,10 @@ fun PlayerMetadataSection(
     val views by viewModel.views.collectAsState()
     val likes by viewModel.likes.collectAsState()
     val isSubscribed by viewModel.isSubscribed.collectAsState()
-
-    var isExpanded by remember { mutableStateOf(false) }
+    val isLiked by viewModel.isLiked.collectAsState()
+    val isDisliked by viewModel.isDisliked.collectAsState()
+    val isBookmarked by viewModel.isBookmarked.collectAsState()
+    var isDescriptionExpanded by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.padding(16.dp)) {
         // Uploader Row
@@ -52,52 +54,98 @@ fun PlayerMetadataSection(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = uploader,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodyLarge
                 )
                 if (subscriberCount != null) {
                     Text(
                         text = "${formatCount(subscriberCount!!)} subscribers",
-                        color = Color.LightGray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
-            Button(
-                onClick = { viewModel.toggleSubscription() },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isSubscribed) Color.DarkGray else Color.White,
-                    contentColor = if (isSubscribed) Color.White else Color.Black
-                )
-            ) {
-                Text(if (isSubscribed) "Subscribed" else "Subscribe")
-            }
+            ActionButton(
+                icon = if (isSubscribed) Icons.Default.NotificationsActive else Icons.Default.Notifications,
+                label = if (isSubscribed) "Subscribed" else "Subscribe",
+                tint = if (isSubscribed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                onClick = { viewModel.toggleSubscription() }
+            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Action Buttons
+        // Primary Action Buttons
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            ActionButton(icon = Icons.Default.ThumbUp, label = formatCount(likes))
-            ActionButton(icon = Icons.Default.ThumbDown, label = "Dislike")
             ActionButton(
-                icon = Icons.Default.Share, 
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.Share,
                 label = "Share",
+                tint = MaterialTheme.colorScheme.onSurface,
                 onClick = { viewModel.triggerPlayerCommand(PlayerCommandEvent.Share) }
             )
             ActionButton(
-                icon = Icons.Default.Download, 
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.FileDownload,
                 label = "Download",
+                tint = MaterialTheme.colorScheme.onSurface,
                 onClick = { viewModel.triggerPlayerCommand(PlayerCommandEvent.Download) }
             )
             ActionButton(
-                icon = Icons.Default.Add, 
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.PlaylistAdd,
                 label = "Save",
+                tint = MaterialTheme.colorScheme.onSurface,
                 onClick = { viewModel.triggerPlayerCommand(PlayerCommandEvent.SaveToPlaylist) }
+            )
+            ActionButton(
+                modifier = Modifier.weight(1f),
+                icon = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                label = "Bookmark",
+                tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                onClick = { viewModel.toggleBookmark() }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Secondary Action Buttons (Like/Dislike - Data Only)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AssistChip(
+                onClick = { viewModel.toggleLike() },
+                label = { Text(formatCount(likes + (if (isLiked) 1 else 0))) },
+                leadingIcon = {
+                    Icon(
+                        if (isLiked) Icons.Default.ThumbUp else Icons.Default.ThumbUpOffAlt,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = if (isLiked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    )
+                },
+                border = null,
+                colors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            AssistChip(
+                onClick = { viewModel.toggleDislike() },
+                label = { Text("Dislike") },
+                leadingIcon = { 
+                    Icon(
+                        if (isDisliked) Icons.Default.ThumbDown else Icons.Default.ThumbDownOffAlt,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = if (isDisliked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    )
+                },
+                border = null,
+                colors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             )
         }
 
@@ -105,32 +153,32 @@ fun PlayerMetadataSection(
 
         // Description Section
         Card(
-            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.1f)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
             modifier = Modifier
                 .fillMaxWidth()
                 .animateContentSize()
-                .clickable { isExpanded = !isExpanded }
+                .clickable { isDescriptionExpanded = !isDescriptionExpanded }
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "${formatCount(views)} views",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
                 Text(
                     text = description,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall,
-                    maxLines = if (isExpanded) Int.MAX_VALUE else 3,
+                    maxLines = if (isDescriptionExpanded) Int.MAX_VALUE else 3,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (!isExpanded && description.length > 100) {
+                if (!isDescriptionExpanded && description.length > 100) {
                     Text(
                         text = "Show more",
-                        color = Color.LightGray,
+                        color = MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.padding(top = 4.dp)
                     )

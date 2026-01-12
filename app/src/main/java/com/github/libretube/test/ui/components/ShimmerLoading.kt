@@ -75,7 +75,7 @@ fun ShimmerVideoRow(
             modifier = Modifier
                 .weight(0.45f)
                 .aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(12.dp))
                 .background(brush)
         )
 
@@ -122,11 +122,80 @@ fun ShimmerVideoRow(
     }
 }
 
+@Composable
+fun ShimmerSpotlightItem(
+    modifier: Modifier = Modifier
+) {
+    val brush = shimmerBrush()
+    Column(
+        modifier = modifier
+            .width(280.dp)
+            .padding(end = 12.dp)
+    ) {
+        // Thumbnail
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(16f / 9f)
+                .clip(RoundedCornerShape(12.dp))
+                .background(brush)
+        )
+        
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+        ) {
+            // Avatar Placeholder
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(brush)
+            )
+            
+            Spacer(modifier = Modifier.width(12.dp))
+            
+            Column {
+                // Title Line 1
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .height(16.dp)
+                        .background(brush, RoundedCornerShape(4.dp))
+                )
+                
+                Spacer(modifier = Modifier.height(6.dp))
+                
+                // Title Line 2
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.6f)
+                        .height(16.dp)
+                        .background(brush, RoundedCornerShape(4.dp))
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Metadata
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.5f)
+                        .height(12.dp)
+                        .background(brush, RoundedCornerShape(4.dp))
+                )
+            }
+        }
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 fun ShimmerVideoRowPreview() {
     Column {
         ShimmerVideoRow()
         ShimmerVideoRow()
+        Spacer(modifier = Modifier.height(16.dp))
+        ShimmerSpotlightItem()
     }
 }

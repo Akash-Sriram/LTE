@@ -8,6 +8,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -38,6 +42,10 @@ import com.github.libretube.test.api.JsonHelper
 import androidx.compose.ui.platform.LocalContext
 import com.github.libretube.test.ui.sheets.DownloadBottomSheet
 import com.github.libretube.test.ui.sheets.DownloadPlaylistBottomSheet
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import com.github.libretube.test.extensions.toID
 import com.github.libretube.test.extensions.toID
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -84,31 +92,100 @@ fun SearchScreen(
     var selectedShareItem by remember { mutableStateOf<Pair<String, String>?>(null) } // id to title
 
     Column(modifier = modifier.fillMaxSize()) {
-        // Filter Chips
-        FlowRow(
+        // Compact Filter Menu
+        var filtersExpanded by remember { mutableStateOf(false) }
+        
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = 8.dp, vertical = 0.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            val filters = listOf(
-                "all" to R.string.all,
-                "videos" to R.string.videos,
-                "channels" to R.string.channels,
-                "playlists" to R.string.playlists,
-                "music_songs" to R.string.music_songs,
-                "music_videos" to R.string.music_videos,
-                "music_albums" to R.string.music_albums,
-                "music_playlists" to R.string.music_playlists,
-                "music_artists" to R.string.music_artists
-            )
+            IconButton(onClick = { filtersExpanded = true }) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_filter_sort),
+                    contentDescription = stringResource(R.string.filter_list)
+                )
+            }
             
-            filters.forEach { (id, labelRes) ->
-                FilterChip(
-                    selected = selectedFilter == id,
-                    onClick = { onFilterSelected(id) },
-                    label = { Text(stringResource(labelRes)) }
+            val currentFilterLabel = when (selectedFilter) {
+                "all" -> R.string.all
+                "videos" -> R.string.videos
+                "channels" -> R.string.channels
+                "playlists" -> R.string.playlists
+                "music_songs" -> R.string.music_songs
+                "music_videos" -> R.string.music_videos
+                "music_albums" -> R.string.music_albums
+                "music_playlists" -> R.string.music_playlists
+                "music_artists" -> R.string.music_artists
+                else -> R.string.all
+            }
+            
+            Text(
+                text = "${stringResource(R.string.filter_list)}: ${stringResource(currentFilterLabel)}",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 8.dp)
+            )
+
+            DropdownMenu(
+                expanded = filtersExpanded,
+                onDismissRequest = { filtersExpanded = false }
+            ) {
+                // YouTube Section
+                Text(
+                    text = "YouTube",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                )
+                
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.all)) },
+                    onClick = { onFilterSelected("all"); filtersExpanded = false }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.videos)) },
+                    onClick = { onFilterSelected("videos"); filtersExpanded = false }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.channels)) },
+                    onClick = { onFilterSelected("channels"); filtersExpanded = false }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.playlists)) },
+                    onClick = { onFilterSelected("playlists"); filtersExpanded = false }
+                )
+                
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                
+                // YouTube Music Section
+                Text(
+                    text = "YouTube Music",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                )
+                
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.music_songs)) },
+                    onClick = { onFilterSelected("music_songs"); filtersExpanded = false }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.music_videos)) },
+                    onClick = { onFilterSelected("music_videos"); filtersExpanded = false }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.music_albums)) },
+                    onClick = { onFilterSelected("music_albums"); filtersExpanded = false }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.music_playlists)) },
+                    onClick = { onFilterSelected("music_playlists"); filtersExpanded = false }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.music_artists)) },
+                    onClick = { onFilterSelected("music_artists"); filtersExpanded = false }
                 )
             }
         }
@@ -146,38 +223,64 @@ fun SearchScreen(
         }
 
         // Search Results
-        LazyPagingItemsList(
-            searchResults = searchResults,
-            context = context,
-            onVideoClick = onVideoClick,
-            onVideoLongClick = { item ->
-                // Ensure item is cast to StreamItem or use properties
-                // ContentItem has url, title, etc. but we might need dummy mapping
-                // for VideoOptionsSheet or update VideoOptionsSheet to take more general data
-                selectedVideo = item as? StreamItem ?: StreamItem(
-                    url = item.url,
-                    title = item.title,
-                    uploaderName = item.uploaderName,
-                    views = item.views,
-                    uploaded = item.uploaded,
-                    duration = item.duration,
-                    thumbnail = item.thumbnail,
-                    uploaderAvatar = item.uploaderAvatar
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyPagingItemsList(
+                searchResults = searchResults,
+                context = context,
+                onVideoClick = onVideoClick,
+                onVideoLongClick = onVideoLongClick,
+                onChannelClick = onChannelClick,
+                onChannelLongClick = onChannelLongClick,
+                onPlaylistClick = onPlaylistClick,
+                onPlaylistLongClick = onPlaylistLongClick,
+                onUploaderClick = onUploaderClick
+            )
+            
+            // Loading indicator
+            if (searchResults.loadState.refresh is androidx.paging.LoadState.Loading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center)
                 )
-                showVideoOptions = true
-            },
-            onChannelClick = onChannelClick,
-            onChannelLongClick = { item ->
-                selectedChannel = item
-                showChannelOptions = true
-            },
-            onPlaylistClick = onPlaylistClick,
-            onPlaylistLongClick = { item ->
-                selectedPlaylist = item
-                showPlaylistOptions = true
-            },
-            onUploaderClick = onUploaderClick
-        )
+            }
+            
+            // Error message
+            val loadState = searchResults.loadState.refresh
+            if (loadState is androidx.paging.LoadState.Error) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_block),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(64.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(R.string.error_occurred),
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = loadState.error.localizedMessage ?: "Unknown Error",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 32.dp)
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(
+                        onClick = { searchResults.retry() },
+                        modifier = Modifier.fillMaxWidth(0.6f)
+                    ) {
+                        Text(stringResource(R.string.retry))
+                    }
+                }
+            }
+        }
     }
 
     if (showChannelOptions && selectedChannel != null) {

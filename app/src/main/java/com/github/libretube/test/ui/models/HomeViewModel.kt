@@ -80,8 +80,11 @@ class HomeViewModel : ViewModel() {
             TrendingCategory.LIVE.name
         ).let { TrendingCategory.valueOf(it) }
 
+        android.util.Log.d("HomeViewModel", "Loading trending for region=$region, category=$category")
+
         runSafely(
             onSuccess = { videos ->
+                android.util.Log.d("HomeViewModel", "Trending loaded: ${videos.size} videos")
                 trending.updateIfChanged(
                     Pair(
                         category,

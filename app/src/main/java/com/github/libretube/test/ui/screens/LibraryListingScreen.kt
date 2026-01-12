@@ -30,6 +30,7 @@ import com.github.libretube.test.ui.models.LibraryViewModel
 import com.github.libretube.test.ui.sheets.PlaylistOptionsSheet
 import com.github.libretube.test.extensions.toID
 import com.github.libretube.test.ui.sheets.DownloadPlaylistBottomSheet
+import com.github.libretube.test.ui.util.animateEnter
 
 enum class LibraryListingType {
     PLAYLISTS, BOOKMARKS
@@ -41,9 +42,7 @@ fun LibraryListingScreen(
     viewModel: LibraryViewModel,
     isPlaylists: Boolean,
     onBackClick: () -> Unit,
-    onItemClick: (String, PlaylistType) -> Unit,
-    onOptionsClick: (String, String, PlaylistType) -> Unit,
-    onSortClick: () -> Unit
+    onItemClick: (String, PlaylistType) -> Unit
 ) {
     val playlists by viewModel.playlists.collectAsState()
     val bookmarks by viewModel.bookmarks.collectAsState()
@@ -63,6 +62,9 @@ fun LibraryListingScreen(
     } else {
         if (isPlaylists) playlists else bookmarks
     }
+
+    var showSortSheet by remember { mutableStateOf(false) }
+    val currentSort by viewModel.currentSort.collectAsState()
 
     Scaffold(
         topBar = {
@@ -84,7 +86,7 @@ fun LibraryListingScreen(
                         IconButton(onClick = { viewModel.toggleReorderMode() }) {
                             Icon(painterResource(R.drawable.ic_drag_handle), contentDescription = stringResource(R.string.reorder_playlist))
                         }
-                        IconButton(onClick = onSortClick) {
+                        IconButton(onClick = { showSortSheet = true }) {
                             Icon(painterResource(R.drawable.ic_filter_sort), contentDescription = null)
                         }
                     }
@@ -136,11 +138,21 @@ fun LibraryListingScreen(
                             else viewModel.onItemMoveBookmarks(index, index + 1)
                         },
                         isFirst = index == 0,
-                        isLast = index == currentItems.size - 1
+                        isLast = index == currentItems.size - 1,
+                        modifier = Modifier.animateEnter(index)
                     )
                 }
             }
         }
+    }
+
+    if (showSortSheet) {
+        com.github.libretube.test.ui.sheets.SortSheet(
+            title = stringResource(R.string.sort_by),
+            currentSort = currentSort,
+            onSortSelected = { viewModel.setSortOrder(it) },
+            onDismissRequest = { showSortSheet = false }
+        )
     }
 
     if (showPlaylistOptions) {
@@ -188,19 +200,22 @@ fun LibraryItemRow(
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
     isFirst: Boolean,
-    isLast: Boolean
+    isLast: Boolean,
+    modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(12.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp), // Increased padding
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Thumbnail with Medium/Large corners
         Box(
             modifier = Modifier
-                .size(width = 120.dp, height = 68.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .width(130.dp) // Slightly wider
+                .aspectRatio(16f / 9f)
+                .clip(MaterialTheme.shapes.medium) // 16dp
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             AsyncImage(
@@ -212,18 +227,21 @@ fun LibraryItemRow(
                 error = painterResource(R.drawable.ic_empty_playlist)
             )
 
-            Surface(
+            // Video Count Overlay
+            Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(4.dp),
-                color = Color.Black.copy(alpha = 0.6f),
-                shape = RoundedCornerShape(4.dp)
+                    .padding(6.dp)
+                    .background(
+                        color = Color.Black.copy(alpha = 0.7f),
+                        shape = RoundedCornerShape(4.dp)
+                    )
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
             ) {
                 Text(
                     text = videoCount.toString(),
                     color = Color.White,
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                    style = MaterialTheme.typography.labelSmall
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
                 )
             }
         }
@@ -235,11 +253,14 @@ fun LibraryItemRow(
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium, // Bolder title
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                fontWeight = FontWeight.Bold
+                color = MaterialTheme.colorScheme.onSurface
             )
+            
+            Spacer(modifier = Modifier.height(4.dp))
+            
             val subText = if (uploader != null) {
                 "$uploader • ${stringResource(R.string.videoCount, videoCount)}"
             } else {
@@ -247,7 +268,7 @@ fun LibraryItemRow(
             }
             Text(
                 text = subText,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium, // Larger body text
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

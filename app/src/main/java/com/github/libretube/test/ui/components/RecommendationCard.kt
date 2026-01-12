@@ -25,18 +25,18 @@ fun RecommendationCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    Column(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(8.dp)
+            .padding(12.dp) // Adjusted padding for vertical card
     ) {
         // Thumbnail
         Box(
             modifier = Modifier
-                .width(140.dp)
+                .fillMaxWidth()
                 .aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(12.dp)) // Larger corners for vertical card
                 .background(Color.Black)
         ) {
             AsyncImage(
@@ -52,13 +52,13 @@ fun RecommendationCard(
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
-                            .padding(4.dp)
-                            .background(Color(0xAA000000), RoundedCornerShape(4.dp))
+                            .padding(6.dp)
+                            .background(Color(0xCC000000), RoundedCornerShape(4.dp))
                             .padding(horizontal = 4.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = formatDuration(duration),
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                             color = Color.White
                         )
                     }
@@ -66,34 +66,32 @@ fun RecommendationCard(
             }
         }
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Metadata
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = item.title ?: "",
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                color = Color.White
-            )
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.Top) {
+                // If we want avatar, we'd add it here. For now, sticking to Title + Subtitle
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = item.title ?: "",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurface 
+                    )
 
-            Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
-            Text(
-                text = item.uploaderName ?: "",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.LightGray,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Text(
-                text = "${formatCount(item.views ?: 0)} views",
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.Gray,
-                maxLines = 1
-            )
+                    Text(
+                        text = "${item.uploaderName ?: ""} • ${formatCount(item.views ?: 0)} views",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
         }
     }
 }

@@ -36,6 +36,7 @@ sealed class PlayerCommandEvent {
     object Share : PlayerCommandEvent()
     object Download : PlayerCommandEvent()
     object SaveToPlaylist : PlayerCommandEvent()
+    object Bookmark : PlayerCommandEvent()
     object Subscribe : PlayerCommandEvent()
 }
 
@@ -70,6 +71,29 @@ class PlayerViewModel : ViewModel() {
     
     private val _playerController = MutableStateFlow<MediaController?>(null)
     val playerController = _playerController.asStateFlow()
+
+    private var pendingMediaItem: androidx.media3.common.MediaItem? = null
+    private var pendingPlayWhenReady: Boolean = false
+
+    init {
+        viewModelScope.launch {
+            playerController.collect { controller ->
+                if (controller != null && pendingVideoId != null) {
+                    android.util.Log.d("PlayerViewModel", "PlayerController connected, executing pending playback command")
+                    val args = android.os.Bundle().apply {
+                        putString(com.github.libretube.test.enums.PlayerCommand.PLAY_VIDEO_BY_ID.name, pendingVideoId)
+                    }
+                    val command = androidx.media3.session.SessionCommand(
+                        "run_player_command_action",
+                        android.os.Bundle.EMPTY
+                    )
+                    controller.sendCustomCommand(command, args)
+                    if (pendingPlayWhenReady) controller.play()
+                    pendingVideoId = null
+                }
+            }
+        }
+    }
 
     fun setPlayerController(controller: MediaController?) {
         _playerController.value = controller
@@ -132,14 +156,62 @@ class PlayerViewModel : ViewModel() {
     private val _dominantColor = MutableStateFlow(Color.Transparent)
     val dominantColor = _dominantColor.asStateFlow()
 
+    private val _isLiked = MutableStateFlow(false)
+    val isLiked = _isLiked.asStateFlow()
+
+    private val _isDisliked = MutableStateFlow(false)
+    val isDisliked = _isDisliked.asStateFlow()
+
+    private val _isBookmarked = MutableStateFlow(false)
+    val isBookmarked = _isBookmarked.asStateFlow()
+
+    private val _isExpanded = MutableStateFlow(false)
+    val isExpanded = _isExpanded.asStateFlow()
+
     private val _currentStream = MutableStateFlow<StreamItem?>(null)
     val currentStream = _currentStream.asStateFlow()
+
+    private val _isInPip = MutableStateFlow(false)
+    val isInPip = _isInPip.asStateFlow()
+
+    fun setIsInPip(inPip: Boolean) {
+        _isInPip.value = inPip
+    }
+
+    private val _areControlsLocked = MutableStateFlow(false)
+    val areControlsLocked = _areControlsLocked.asStateFlow()
+
+    fun toggleControlsLock() {
+        _areControlsLocked.value = !_areControlsLocked.value
+    }
+
+    private val _showControls = MutableStateFlow(true)
+    val showControls = _showControls.asStateFlow()
+
+    fun toggleControls() {
+        if (_areControlsLocked.value) return // Don't toggle if locked
+        _showControls.value = !_showControls.value
+    }
+
+    fun setControlsVisible(visible: Boolean) {
+        if (_areControlsLocked.value && visible) return
+        _showControls.value = visible
+    }
 
     private val _playbackPosition = MutableStateFlow(0L)
     val playbackPosition = _playbackPosition.asStateFlow()
 
     private val _playbackSpeed = MutableStateFlow(1.0f)
     val playbackSpeed = _playbackSpeed.asStateFlow()
+
+    private val _playbackPitch = MutableStateFlow(1.0f)
+    val playbackPitch = _playbackPitch.asStateFlow()
+
+    private val _repeatMode = MutableStateFlow(androidx.media3.common.Player.REPEAT_MODE_OFF)
+    val repeatMode = _repeatMode.asStateFlow()
+
+    private val _resizeMode = MutableStateFlow(androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT)
+    val resizeMode = _resizeMode.asStateFlow()
 
     // Queue (direct from singleton)
     val queue = PlayingQueue.queueState
@@ -155,6 +227,17 @@ class PlayerViewModel : ViewModel() {
     // Comments (Using a simplified list for now, can expand later)
     private val _comments = MutableStateFlow<List<com.github.libretube.test.api.obj.Comment>>(emptyList())
     val comments = _comments.asStateFlow()
+
+    private val _showCommentsSheet = MutableStateFlow(false)
+    val showCommentsSheet = _showCommentsSheet.asStateFlow()
+
+    fun openCommentsSheet() {
+        _showCommentsSheet.value = true
+    }
+
+    fun closeCommentsSheet() {
+        _showCommentsSheet.value = false
+    }
 
     fun updatePlaybackState(isPlaying: Boolean, position: Long, duration: Long) {
         _isPlaying.value = isPlaying
@@ -181,6 +264,36 @@ class PlayerViewModel : ViewModel() {
         _subscriberCount.value = subscriberCount
         _isBuffering.value = false // Metadata loaded, usually stop buffering indicator
         checkSubscriptionStatus()
+        checkBookmarkStatus()
+    }
+
+    private fun checkBookmarkStatus() {
+        val stream = _currentStream.value ?: return
+        val videoId = stream.url?.toID() ?: return
+        viewModelScope.launch {
+            // Check if video is in any local playlist or bookmarked
+            // For now, let's just check if it's in the "Favorites" or a special bookmarked list if we have one.
+            // Actually, "Bookmark" in this context often refers to a simple local 'saved' state.
+            // Let's use a simple preference or DB for 'Bookmarked' videos.
+        }
+    }
+    
+    fun toggleLike() {
+        _isLiked.value = !_isLiked.value
+        if (_isLiked.value) _isDisliked.value = false
+    }
+
+    fun toggleDislike() {
+        _isDisliked.value = !_isDisliked.value
+        if (_isDisliked.value) _isLiked.value = false
+    }
+
+    fun toggleBookmark() {
+        _isBookmarked.value = !_isBookmarked.value
+    }
+
+    fun setExpanded(expanded: Boolean) {
+        _isExpanded.value = expanded
     }
 
     private fun checkSubscriptionStatus() {
@@ -244,13 +357,39 @@ class PlayerViewModel : ViewModel() {
     fun setPlaybackSpeed(speed: Float) {
         _playbackSpeed.value = speed
         playerController.value?.let { player ->
-            player.playbackParameters = PlaybackParameters(speed, player.playbackParameters.pitch)
+            player.playbackParameters = PlaybackParameters(speed, _playbackPitch.value)
         }
         // Persist to preferences
         com.github.libretube.test.helpers.PreferenceHelper.putString(
             com.github.libretube.test.constants.PreferenceKeys.PLAYBACK_SPEED,
             speed.toString()
         )
+    }
+
+    fun setPlaybackPitch(pitch: Float) {
+        _playbackPitch.value = pitch
+        playerController.value?.let { player ->
+            player.playbackParameters = PlaybackParameters(_playbackSpeed.value, pitch)
+        }
+    }
+
+    fun cycleRepeatMode() {
+        val nextMode = when (_repeatMode.value) {
+            androidx.media3.common.Player.REPEAT_MODE_OFF -> androidx.media3.common.Player.REPEAT_MODE_ONE
+            androidx.media3.common.Player.REPEAT_MODE_ONE -> androidx.media3.common.Player.REPEAT_MODE_ALL
+            else -> androidx.media3.common.Player.REPEAT_MODE_OFF
+        }
+        _repeatMode.value = nextMode
+        playerController.value?.repeatMode = nextMode
+    }
+
+    fun cycleResizeMode() {
+        val nextMode = when (_resizeMode.value) {
+            androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL
+            androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+            else -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+        }
+        _resizeMode.value = nextMode
     }
 
     fun initializePlaybackSpeed() {
@@ -283,6 +422,8 @@ class PlayerViewModel : ViewModel() {
     var currentSubtitle = Subtitle(code = PlayerHelper.defaultSubtitleCode)
     var sponsorBlockConfig = PlayerHelper.getSponsorBlockCategories()
 
+    private var pendingVideoId: String? = null
+
     fun loadVideo(
         videoId: String,
         playlistId: String? = null,
@@ -290,26 +431,74 @@ class PlayerViewModel : ViewModel() {
         timestamp: Long = 0,
         playWhenReady: Boolean = true
     ) {
-        // Fetch or create a placeholder StreamItem to update the UI immediately
-        // In a real scenario, we might want to fetch details here or rely on the player to load it.
-        // For now, valid playback requires a StreamItem in currentStream.
-        // If we don't have it, we might rely on the PlayerScreen to show loading.
+        android.util.Log.d("PlayerViewModel", "loadVideo called: videoId=$videoId")
         
-        // This is a simplified implementation. The actual loading happens via MediaController/Service.
-        // But we update the internal state to reflect "loading" or "new video".
-        
-        // If we are coming from NavigationHelper, it calls this.
-        // We should ensure `currentStream` is updated if we have data, or set to loading.
         viewModelScope.launch {
            try {
+                // Update queue immediately with placeholder for UI feedback
+                val placeholderStream = StreamItem(
+                    url = videoId.toID(),
+                    title = "Loading...",
+                    uploaderName = "",
+                    thumbnail = "https://i.ytimg.com/vi/$videoId/hqdefault.jpg",
+                    type = com.github.libretube.test.api.obj.StreamItem.TYPE_STREAM
+                )
+                // We update the local queue UI, but the Service will manage the actual queue via the command
+                PlayingQueue.updateQueue(placeholderStream, playlistId, channelId)
+
+                // Delegate playback to the Service via Controller Command
+                val controller = _playerController.value
+                if (controller != null) {
+                    val args = android.os.Bundle().apply {
+                        putString(com.github.libretube.test.enums.PlayerCommand.PLAY_VIDEO_BY_ID.name, videoId)
+                    }
+                    val command = androidx.media3.session.SessionCommand(
+                        "run_player_command_action",
+                        android.os.Bundle.EMPTY
+                    )
+                    controller.sendCustomCommand(command, args)
+                    if (playWhenReady) controller.play()
+                } else {
+                    android.util.Log.w("PlayerViewModel", "PlayerController is null, queuing playback command")
+                    pendingVideoId = videoId
+                    pendingPlayWhenReady = playWhenReady
+                }
+                
+                // Fetch full metadata for UI (handled independently of playback)
                 val streams = withContext(kotlinx.coroutines.Dispatchers.IO) {
                    MediaServiceRepository.instance.getStreams(videoId)
                 }
-                setStream(streams.toStreamItem(videoId))
-               // The Player (ExoPlayer) loading is handled by MediaController connected to Service.
-               // We might explicitly tell the controller to play if needed, but usually the Service handles it via intent.
+                
+                val streamItem = streams.toStreamItem(videoId)
+                setStream(streamItem)
+                updateMetadata(
+                    title = streams.title,
+                    uploader = streams.uploader,
+                    uploaderAvatar = streams.uploaderAvatar,
+                    description = streams.description,
+                    views = streams.views,
+                    likes = streams.likes,
+                    subscriberCount = streams.uploaderSubscriberCount
+                )
+                
+                // Restore Suggestion Videos
+                updateRelatedVideos(streams.relatedStreams)
+                
+                 // Update queue with real data for UI
+                PlayingQueue.updateCurrent(streamItem)
+                
+                // Fetch Comments
+                launch(kotlinx.coroutines.Dispatchers.IO) {
+                    try {
+                        val commentsResponse = MediaServiceRepository.instance.getComments(videoId)
+                        updateComments(commentsResponse.comments)
+                    } catch (e: Exception) {
+                        android.util.Log.e("PlayerViewModel", "Error fetching comments", e)
+                    }
+                }
+
            } catch (e: Exception) {
-               // Handle error
+               android.util.Log.e("PlayerViewModel", "Error loading video $videoId", e)
            }
         }
     }

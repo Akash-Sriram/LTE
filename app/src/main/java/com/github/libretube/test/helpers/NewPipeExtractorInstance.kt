@@ -1,5 +1,6 @@
 package com.github.libretube.test.helpers
 
+import android.util.Log
 import com.github.libretube.test.util.NewPipeDownloaderImpl
 import com.github.libretube.test.helpers.PreferenceHelper
 import com.github.libretube.test.constants.PreferenceKeys

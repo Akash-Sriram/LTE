@@ -50,7 +50,7 @@ import com.github.libretube.test.db.obj.WatchPosition
         com.github.libretube.test.db.obj.AppSetting::class,
         com.github.libretube.test.db.obj.DeArrowCacheItem::class
     ],
-    version = 30,
+    version = 32,
     autoMigrations = [
         AutoMigration(from = 7, to = 8),
         AutoMigration(from = 8, to = 9),
@@ -65,7 +65,8 @@ import com.github.libretube.test.db.obj.WatchPosition
             to = 22,
             spec = AppDatabase.DeleteCustomInstancesSpec::class
         ),
-        AutoMigration(from = 22, to = 23)
+        AutoMigration(from = 22, to = 23),
+        AutoMigration(from = 31, to = 32)
     ]
 )
 @TypeConverters(Converters::class)

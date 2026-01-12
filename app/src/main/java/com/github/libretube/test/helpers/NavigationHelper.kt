@@ -75,9 +75,8 @@ object NavigationHelper {
              // Minimize player handled by ViewModel/UI observing state?
         } else {
              // Video mode
-             // Expansion handled by ViewModel usage or UI
-             // We might want to trigger expansion explicitly if using shared viewmodel
-             // viewModel.triggerPlayerExpansion() // If we add this method or similar
+             android.util.Log.d("NavigationHelper", "Video mode selected, triggering player expansion")
+             viewModel.triggerPlayerExpansion()
         }
     }
 

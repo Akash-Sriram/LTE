@@ -9,7 +9,12 @@ import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
 
 @Serializable
-@Entity(tableName = "watchHistoryItem")
+@Entity(
+    tableName = "watchHistoryItem",
+    indices = [
+        androidx.room.Index(value = ["watchedAt"])
+    ]
+)
 data class WatchHistoryItem(
     @PrimaryKey val videoId: String = "",
     @ColumnInfo var title: String? = null,
@@ -18,10 +23,12 @@ data class WatchHistoryItem(
     @ColumnInfo val uploaderUrl: String? = null,
     @ColumnInfo var uploaderAvatar: String? = null,
     @ColumnInfo var thumbnailUrl: String? = null,
-    @ColumnInfo val duration: Long? = null,
-    @ColumnInfo val isShort: Boolean = false
+    @ColumnInfo var duration: Long? = null,
+    @ColumnInfo val isShort: Boolean = false,
+    @ColumnInfo var watchedAt: Long = 0,
+    @ColumnInfo var position: Long = 0
 ) {
-    val isLive get() = (duration == null) || (duration <= 0L)
+    val isLive get() = duration?.let { it <= 0L } ?: true
 
     fun toStreamItem() = StreamItem(
         url = videoId,

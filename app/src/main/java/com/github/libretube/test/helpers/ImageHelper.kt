@@ -111,7 +111,7 @@ object ImageHelper {
         // Loading image
 
         // only load online images if the data saver mode is disabled
-        if (DataSaverMode.isEnabled(target.context)) {
+        if (DataSaverMode.isEnabled(target.context) || BandwidthHelper.isBandwidthSaverEnabled()) {
             if (urlToLoad.startsWith(HTTP_SCHEME) && !isCached(urlToLoad)) return
         }
 

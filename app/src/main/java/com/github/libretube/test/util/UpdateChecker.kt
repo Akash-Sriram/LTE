@@ -33,7 +33,12 @@ class UpdateChecker(private val context: Context) {
 
         try {
             val response = if (isExperimental) {
-                 RetrofitInstance.externalApi.getReleaseByTag("experimental")
+                 try {
+                     RetrofitInstance.externalApi.getReleaseByTag("experimental")
+                 } catch (e: Exception) {
+                     // Fallback to latest if experimental tag not found (404)
+                     RetrofitInstance.externalApi.getLatestRelease()
+                 }
             } else {
                  RetrofitInstance.externalApi.getLatestRelease()
             }

@@ -23,10 +23,14 @@ import com.github.libretube.test.ui.components.PlaylistCardState
 import com.github.libretube.test.ui.components.ShimmerVideoRow
 import com.github.libretube.test.ui.components.VideoCard
 import com.github.libretube.test.ui.components.VideoCardState
+import com.github.libretube.test.ui.components.ShimmerSpotlightItem
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import com.github.libretube.test.ui.theme.LibreTubeTheme
 import androidx.compose.runtime.livedata.observeAsState
 import com.github.libretube.test.extensions.toID
 import com.github.libretube.test.extensions.formatShort
+import com.github.libretube.test.ui.util.animateEnter
 
 data class HomeScreenState(
     val featured: List<VideoCardState>? = null,
@@ -44,7 +48,8 @@ data class HomeScreenState(
 fun HomeScreen(
     navController: androidx.navigation.NavController,
     homeViewModel: com.github.libretube.test.ui.models.HomeViewModel,
-    subscriptionsViewModel: com.github.libretube.test.ui.models.SubscriptionsViewModel
+    subscriptionsViewModel: com.github.libretube.test.ui.models.SubscriptionsViewModel,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val trending by homeViewModel.trending.observeAsState()
@@ -113,7 +118,9 @@ fun HomeScreen(
             }
         },
         onTrendingCategoryClick = { /* Show Dialog - TODO: Implement Composable Dialog */ },
-        onTrendingRegionClick = { /* Show Dialog - TODO */ }
+        onTrendingRegionClick = { /* Show Dialog - TODO */ },
+        modifier = Modifier,
+        contentPadding = contentPadding
     )
 }
 
@@ -152,29 +159,64 @@ fun HomeContent(
     onSectionClick: (String) -> Unit,
     onTrendingCategoryClick: () -> Unit,
     onTrendingRegionClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
+    val shimmerScrollState = androidx.compose.foundation.rememberScrollState()
+    
     if (state.isLoading && !state.isRefreshing) {
         Column {
-            repeat(5) { ShimmerVideoRow() }
+             // Mimic Home Structure with Shimmer
+             Spacer(modifier = Modifier.height(16.dp))
+             Row(
+                 modifier = Modifier
+                     .fillMaxWidth()
+                     .horizontalScroll(shimmerScrollState)
+                     .padding(horizontal = 16.dp)
+             ) {
+                 repeat(3) {
+                     ShimmerSpotlightItem()
+                 }
+             }
+             Spacer(modifier = Modifier.height(24.dp))
+             Row(
+                 modifier = Modifier
+                     .fillMaxWidth()
+                     .horizontalScroll(androidx.compose.foundation.rememberScrollState()) // Independent scroll
+                     .padding(horizontal = 16.dp)
+             ) {
+                 repeat(3) {
+                     ShimmerSpotlightItem()
+                 }
+             }
         }
         return
     }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 16.dp)
+        contentPadding = PaddingValues(
+            bottom = 16.dp + contentPadding.calculateBottomPadding(),
+            top = contentPadding.calculateTopPadding()
+        )
     ) {
+        var itemIndex = 0
+
         // Featured Section
         state.featured?.takeIf { it.isNotEmpty() }?.let { videos ->
             item {
                 HomeSectionHeader(
                     title = stringResource(R.string.featured),
-                    onClick = { onSectionClick("featured") }
+                    onClick = { onSectionClick("featured") },
+                    modifier = Modifier.animateEnter(itemIndex++)
                 )
             }
             item {
-                HomeHorizontalVideoList(videos, onVideoClick)
+                HomeHorizontalVideoList(
+                    videos = videos, 
+                    onVideoClick = onVideoClick,
+                    modifier = Modifier.animateEnter(itemIndex++)
+                )
             }
         }
 
@@ -183,11 +225,16 @@ fun HomeContent(
             item {
                 HomeSectionHeader(
                     title = stringResource(R.string.continue_watching),
-                    onClick = { onSectionClick("watching") }
+                    onClick = { onSectionClick("watching") },
+                    modifier = Modifier.animateEnter(itemIndex++)
                 )
             }
             item {
-                HomeHorizontalVideoList(videos, onVideoClick)
+                HomeHorizontalVideoList(
+                    videos = videos, 
+                    onVideoClick = onVideoClick,
+                    modifier = Modifier.animateEnter(itemIndex++)
+                )
             }
         }
 
@@ -197,7 +244,8 @@ fun HomeContent(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(end = 8.dp),
+                        .padding(end = 8.dp)
+                        .animateEnter(itemIndex++),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(modifier = Modifier.weight(1f)) {
@@ -217,7 +265,11 @@ fun HomeContent(
                 }
             }
             item {
-                HomeHorizontalVideoList(videos, onVideoClick)
+                HomeHorizontalVideoList(
+                    videos = videos, 
+                    onVideoClick = onVideoClick,
+                    modifier = Modifier.animateEnter(itemIndex++)
+                )
             }
         }
 
@@ -226,11 +278,16 @@ fun HomeContent(
             item {
                 HomeSectionHeader(
                     title = stringResource(R.string.bookmarks),
-                    onClick = { onSectionClick("bookmarks") }
+                    onClick = { onSectionClick("bookmarks") },
+                    modifier = Modifier.animateEnter(itemIndex++)
                 )
             }
             item {
-                HomeHorizontalPlaylistList(playlists, onPlaylistClick)
+                HomeHorizontalPlaylistList(
+                    playlists = playlists, 
+                    onPlaylistClick = onPlaylistClick,
+                    modifier = Modifier.animateEnter(itemIndex++)
+                )
             }
         }
 
@@ -239,11 +296,16 @@ fun HomeContent(
             item {
                 HomeSectionHeader(
                     title = stringResource(R.string.playlists),
-                    onClick = { onSectionClick("playlists") }
+                    onClick = { onSectionClick("playlists") },
+                    modifier = Modifier.animateEnter(itemIndex++)
                 )
             }
             item {
-                HomeHorizontalPlaylistList(playlists, onPlaylistClick)
+                HomeHorizontalPlaylistList(
+                    playlists = playlists, 
+                    onPlaylistClick = onPlaylistClick,
+                    modifier = Modifier.animateEnter(itemIndex++)
+                )
             }
         }
     }
@@ -279,17 +341,19 @@ fun HomeSectionHeader(
 @Composable
 fun HomeHorizontalVideoList(
     videos: List<VideoCardState>,
-    onVideoClick: (String) -> Unit
+    onVideoClick: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     LazyRow(
-        contentPadding = PaddingValues(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = modifier,
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(videos) { video ->
-            VideoCard(
+            com.github.libretube.test.ui.components.SpotlightCard(
                 state = video,
-                onClick = { onVideoClick(video.videoId) },
-                modifier = Modifier.width(280.dp) // Fixed width for horizontal scrolling
+                onClick = { onVideoClick(video.videoId) }
+                // modifier is handled inside SpotlightCard to fixed width
             )
         }
     }
@@ -298,17 +362,19 @@ fun HomeHorizontalVideoList(
 @Composable
 fun HomeHorizontalPlaylistList(
     playlists: List<PlaylistCardState>,
-    onPlaylistClick: (String) -> Unit
+    onPlaylistClick: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     LazyRow(
-        contentPadding = PaddingValues(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = modifier,
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(playlists) { playlist ->
             PlaylistCard(
                 state = playlist,
                 onClick = { onPlaylistClick(playlist.playlistId) },
-                modifier = Modifier.width(240.dp)
+                modifier = Modifier.width(280.dp)
             )
         }
     }

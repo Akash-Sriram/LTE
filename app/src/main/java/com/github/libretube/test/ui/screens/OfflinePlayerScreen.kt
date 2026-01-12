@@ -52,10 +52,9 @@ fun OfflinePlayerScreen(
         FullPlayer(
             viewModel = playerViewModel,
             alpha = 1f,
-            onQueueClick = { showQueue = true },
             onChaptersClick = { showChapters = true },
-            onSettingsClick = { showSettings = true },
-            onVideoOptionsClick = {}
+            onVideoOptionsClick = { showSettings = true }, // Use showSettings for options
+            onCommentsClick = {}
         )
 
         // Sheets
@@ -144,7 +143,7 @@ fun OfflinePlayerScreen(
         }
 
         if (showSettings) {
-            PlayerSettingsSheet(
+             ConsolidatedOptionsSheet(
                 viewModel = playerViewModel,
                 onDismissRequest = { showSettings = false },
                 onQualityClick = { 

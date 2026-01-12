@@ -17,6 +17,7 @@ import com.github.libretube.test.BuildConfig
 import com.github.libretube.test.R
 import com.github.libretube.test.ui.base.BaseActivity
 import com.github.libretube.test.ui.screens.SettingsGroupScreen
+import com.github.libretube.test.ui.screens.BackupRestoreScreen
 import com.github.libretube.test.ui.screens.SettingsRegistry
 import com.github.libretube.test.ui.screens.SettingsScreen
 import com.github.libretube.test.ui.theme.LibreTubeTheme
@@ -176,7 +177,17 @@ class SettingsActivity : BaseActivity() {
                             SettingsGroupScreen(
                                 title = stringResource(R.string.data_backup),
                                 items = SettingsRegistry.getBackupItems(),
-                                onNavigate = {}
+                                onNavigate = { route ->
+                                    when (route) {
+                                        "backup_restore_screen" -> navController.navigate("backup_restore_screen")
+                                    }
+                                }
+                            )
+                        }
+                        
+                        composable("backup_restore_screen") {
+                            BackupRestoreScreen(
+                                onNavigateBack = { navController.popBackStack() }
                             )
                         }
                     }

@@ -41,17 +41,8 @@ object DatabaseHelper {
 
     suspend fun getWatchHistoryPage(page: Int, pageSize: Int): List<WatchHistoryItem> {
         val watchHistoryDao = Database.watchHistoryDao()
-        val historySize = watchHistoryDao.getSize()
-
-        if (historySize < pageSize * (page - 1)) return emptyList()
-
-        val offset = historySize - (pageSize * page)
-        val limit = if (offset < 0) {
-            offset + pageSize
-        } else {
-            pageSize
-        }
-        return com.github.libretube.test.util.DeArrowUtil.deArrowWatchHistoryItems(watchHistoryDao.getN(limit, maxOf(offset, 0)).reversed())
+        val offset = (page - 1) * pageSize
+        return com.github.libretube.test.util.DeArrowUtil.deArrowWatchHistoryItems(watchHistoryDao.getN(pageSize, offset))
     }
 
     suspend fun addToSearchHistory(searchHistoryItem: SearchHistoryItem) {

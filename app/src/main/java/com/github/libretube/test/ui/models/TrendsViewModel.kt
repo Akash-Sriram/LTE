@@ -23,14 +23,9 @@ class TrendsViewModel : ViewModel() {
     val trendingVideos = MutableLiveData<Map<TrendingCategory, TrendingStreams>>()
     var recyclerViewState: Parcelable? = null
 
-    private var currentJob: Job? = null
-
     fun fetchTrending(context: Context, category: TrendingCategory) {
-        // cancel previously started, still running requests as users can only see one tab at a time,
-        // so it doesn't make sense to continue loading the previously seen (now hidden) tab data
-        runCatching { currentJob?.cancel() }
-
-        currentJob = viewModelScope.launch {
+        // Allow concurrent loading for different categories
+        viewModelScope.launch {
             try {
                 val region = PreferenceHelper.getTrendingRegion(context)
                 val response = withContext(Dispatchers.IO) {
@@ -40,6 +35,8 @@ class TrendsViewModel : ViewModel() {
             } catch (e: Exception) {
                 // Error fetching trends
                 context.toastFromMainDispatcher(e.localizedMessage.orEmpty())
+                // Set empty list to stop loading
+                setStreamsForCategory(category, TrendingStreams(PreferenceHelper.getTrendingRegion(context), emptyList()))
             }
         }
     }

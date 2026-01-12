@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.github.libretube.test.ui.theme.LibreTubeTheme
 
@@ -47,19 +48,18 @@ fun PlaylistCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    Column(
         modifier = modifier
-            .fillMaxWidth()
+            .width(280.dp) // Fixed width for horizontal lists
             .clickable(onClick = onClick)
-            .padding(8.dp) // Based on ItemRow
     ) {
-        // Thumbnail Section (45% width approx)
+        // Thumbnail Section - 16:9 aspect ratio with Large rounded corners
         Box(
             modifier = Modifier
-                .weight(0.45f)
+                .fillMaxWidth()
                 .aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color.Black)
+                .clip(MaterialTheme.shapes.large) // 24dp
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             AsyncImage(
                 model = state.thumbnailUrl,
@@ -68,55 +68,60 @@ fun PlaylistCard(
                 modifier = Modifier.matchParentSize()
             )
 
-            // Video Count Overlay
-            Surface(
-                color = Color(0xAA000000), // Semi-transparent black
+            // Video Count Overlay (Bottom Right)
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
+                    .align(Alignment.BottomEnd)
+                    .padding(8.dp)
+                    .background(
+                        color = Color.Black.copy(alpha = 0.7f), 
+                        shape = RoundedCornerShape(6.dp)
+                    )
+                    .padding(horizontal = 6.dp, vertical = 3.dp)
             ) {
                 Row(
-                    modifier = Modifier.padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp)
                 ) {
-                    Icon(
+                     Icon(
                         painter = painterResource(R.drawable.ic_playlist),
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(12.dp)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = state.videoCount.toString(),
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                         color = Color.White
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Info Section
         Column(
-            modifier = Modifier
-                .weight(0.55f)
+            modifier = Modifier.padding(horizontal = 4.dp)
         ) {
             Text(
                 text = state.title,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium), // 18sp in xml
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.SemiBold,
+                     lineHeight = 22.sp
+                ),
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
                 text = state.description,
-                style = MaterialTheme.typography.bodyMedium, // 14sp
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }

@@ -28,86 +28,77 @@ fun LibraryShelfItem(
     onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    Card(
+    Column(
         modifier = modifier
             .width(160.dp)
             .padding(4.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.medium) // 16dp
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
-            ),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            )
+            .padding(4.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(4.dp)
+        // Thumbnail Container
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(90.dp)
+                .clip(MaterialTheme.shapes.medium)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
-            // Thumbnail Container
-            Box(
+            AsyncImage(
+                model = state.thumbnailUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+
+            // Bottom Overlay with Video Count
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(90.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .align(Alignment.BottomCenter)
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                AsyncImage(
-                    model = state.thumbnailUrl,
+                Icon(
+                    painter = painterResource(R.drawable.ic_playlist),
                     contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
+                    tint = Color.White,
+                    modifier = Modifier.size(12.dp)
                 )
-
-                // Bottom Overlay with Video Count
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter)
-                        .background(Color(0x99000000))
-                        .padding(vertical = 2.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_playlist),
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = state.videoCount.toString(),
-                        color = Color.White,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = state.videoCount.toString(),
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+                )
             }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            // Title
-            Text(
-                text = state.title,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp
-                ),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            // Description / Uploader
-            Text(
-                text = state.description,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 11.sp
-                ),
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Title
+        Text(
+            text = state.title,
+            style = MaterialTheme.typography.titleSmall.copy(
+                fontWeight = FontWeight.Bold
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        // Description / Uploader
+        Text(
+            text = state.description,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }

@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 @Entity(tableName = "searchHistoryItem")
 data class SearchHistoryItem(
-    @PrimaryKey val query: String = ""
+    @PrimaryKey val query: String = "",
+    @androidx.room.ColumnInfo(defaultValue = "0") val timestamp: Long = System.currentTimeMillis()
 )
 

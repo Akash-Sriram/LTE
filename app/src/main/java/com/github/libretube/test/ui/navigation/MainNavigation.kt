@@ -1,10 +1,14 @@
 package com.github.libretube.test.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.github.libretube.test.ui.screens.*
@@ -49,6 +53,7 @@ object Routes {
 fun MainNavigation(
     navController: NavHostController,
     modifier: Modifier = Modifier,
+    contentPadding: androidx.compose.foundation.layout.PaddingValues = androidx.compose.foundation.layout.PaddingValues(0.dp),
     playerViewModel: PlayerViewModel
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -69,28 +74,32 @@ fun MainNavigation(
             HomeScreen(
                 navController = navController,
                 homeViewModel = homeViewModel,
-                subscriptionsViewModel = subscriptionsViewModel
+                subscriptionsViewModel = subscriptionsViewModel,
+                contentPadding = contentPadding
             )
         }
         
         composable(Routes.Trends) {
             TrendsScreen(
                 navController = navController,
-                viewModel = trendsViewModel
+                viewModel = trendsViewModel,
+                contentPadding = contentPadding
             )
         }
         
         composable(Routes.Subscriptions) {
             SubscriptionsScreen(
                 navController = navController,
-                viewModel = subscriptionsViewModel
+                viewModel = subscriptionsViewModel,
+                contentPadding = contentPadding
             )
         }
         
         composable(Routes.Library) {
             LibraryScreen(
                 navController = navController,
-                libraryViewModel = libraryViewModel
+                libraryViewModel = libraryViewModel,
+                contentPadding = contentPadding
             )
         }
         
@@ -134,12 +143,31 @@ fun MainNavigation(
             arguments = listOf(navArgument("query") { type = NavType.StringType })
         ) { backStackEntry ->
             val query = backStackEntry.arguments?.getString("query") ?: ""
+            val searchViewModel: SearchScreenViewModel = viewModel(activity)
+            
+            // Trigger search when query changes
+            LaunchedEffect(query) {
+                if (query.isNotBlank()) {
+                    searchViewModel.setQuery(query)
+                    searchViewModel.saveToHistory(query)
+                }
+            }
+            
+            // Collect state
+            val searchResults = searchViewModel.searchResults.collectAsLazyPagingItems()
+            val selectedFilter by searchViewModel.selectedFilter.collectAsState()
+            val searchSuggestion by searchViewModel.searchSuggestion.collectAsState()
+            
             SearchScreen(
-                searchResults = kotlinx.coroutines.flow.flowOf<androidx.paging.PagingData<com.github.libretube.test.api.obj.ContentItem>>().collectAsLazyPagingItems(), 
-                selectedFilter = "all",
-                onFilterSelected = {},
-                searchSuggestion = null,
-                onSuggestionClick = {},
+                searchResults = searchResults,
+                selectedFilter = selectedFilter,
+                onFilterSelected = { filter -> searchViewModel.setFilter(filter) },
+                searchSuggestion = searchSuggestion,
+                onSuggestionClick = { suggestion ->
+                    navController.navigate(Routes.search(suggestion)) {
+                        popUpTo(Routes.Search) { inclusive = true }
+                    }
+                },
                 onVideoClick = { item -> com.github.libretube.test.helpers.NavigationHelper.navigateVideo(context, item.url) },
                 onVideoLongClick = {},
                 onChannelClick = { item -> com.github.libretube.test.helpers.NavigationHelper.navigateChannel(context, item.url) },
@@ -191,19 +219,39 @@ fun MainNavigation(
             val typeStr = backStackEntry.arguments?.getString("type") ?: PlaylistType.PUBLIC.name
             val type = try { PlaylistType.valueOf(typeStr) } catch (e: Exception) { PlaylistType.PUBLIC }
             
+            val playlistViewModel: PlaylistScreenModel = viewModel()
+            val playlist by playlistViewModel.playlist.collectAsState()
+            val isLoading by playlistViewModel.isLoading.collectAsState()
+            val isBookmarked by playlistViewModel.isBookmarked.collectAsState()
+
+            LaunchedEffect(playlistId) {
+                playlistViewModel.loadPlaylist(playlistId, type)
+            }
+
             PlaylistScreen(
-                playlist = null,
+                playlist = playlist,
                 playlistType = type,
-                isLoading = true,
-                isBookmarked = false,
-                onBookmarkClick = {},
-                onVideoClick = {},
-                onVideoLongClick = {},
-                onPlayAllClick = {},
-                onShuffleClick = {},
-                onSaveReorder = {},
-                onDeleteVideo = {},
-                onShowOptions = {}
+                isLoading = isLoading,
+                isBookmarked = isBookmarked,
+                onBookmarkClick = { playlistViewModel.toggleBookmark(playlistId) },
+                onVideoClick = { item -> com.github.libretube.test.helpers.NavigationHelper.navigateVideo(context, item.url) },
+                onVideoLongClick = { item -> /* TODO: Show options */ },
+                onPlayAllClick = {
+                    playlist?.relatedStreams?.let { streams ->
+                        com.github.libretube.test.util.PlayingQueue.setStreams(streams)
+                        com.github.libretube.test.helpers.NavigationHelper.navigateVideo(context, streams.first().url)
+                    }
+                },
+                onShuffleClick = {
+                    playlist?.relatedStreams?.let { streams ->
+                        val shuffled = streams.shuffled()
+                        com.github.libretube.test.util.PlayingQueue.setStreams(shuffled)
+                        com.github.libretube.test.helpers.NavigationHelper.navigateVideo(context, shuffled.first().url)
+                    }
+                },
+                onSaveReorder = { items -> playlistViewModel.saveReorder(playlistId, items) },
+                onDeleteVideo = { item -> playlistViewModel.deleteVideo(playlistId, item) },
+                onShowOptions = { /* TODO */ }
             )
         }
         
@@ -221,12 +269,6 @@ fun MainNavigation(
                 onBackClick = { navController.popBackStack() },
                 onItemClick = { id, playlistType -> 
                     navController.navigate(Routes.playlist(id, playlistType))
-                },
-                onOptionsClick = { id, title, playlistType ->
-                    // TODO: Show options
-                },
-                onSortClick = {
-                     // TODO: Show sort dialog
                 }
             )
         }

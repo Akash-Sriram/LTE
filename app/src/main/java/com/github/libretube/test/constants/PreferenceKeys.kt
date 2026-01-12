@@ -80,6 +80,12 @@ object PreferenceKeys {
     const val DEARROW_EXEMPT_LIVE = "dearrow_exempt_live"
     const val DEARROW_USER_ID = "dearrow_user_id"
     const val SB_HIGHLIGHTS = "sb_highlights"
+    
+    // Additional SponsorBlock categories
+    const val SB_CATEGORY_MUSIC_OFFTOPIC = "music_offtopic_category"
+    const val SB_CATEGORY_PREVIEW = "preview_category"
+    const val SB_CATEGORY_FILLER = "filler_category"
+    const val SB_CATEGORY_SELFPROMO = "selfpromo_category"
 
     // Notifications
     const val NOTIFICATION_ENABLED = "notification_toggle"
@@ -106,8 +112,11 @@ object PreferenceKeys {
 
     // Advanced
     const val AUTOMATIC_UPDATE_CHECKS = "automatic_update_checks"
+    const val UPDATE_CHECK_FREQUENCY = "update_check_frequency"
     const val DATA_SAVER_MODE = "data_saver_mode_key"
+    const val BANDWIDTH_SAVER_MODE = "bandwidth_saver_mode"
     const val MAX_IMAGE_CACHE = "image_cache_size"
+    const val CLEAR_CACHE = "clear_cache"
     const val RESET_SETTINGS = "reset_settings"
     const val SET_DEFAULT_APP = "set_default_app"
     const val CLEAR_SEARCH_HISTORY = "clear_search_history"
@@ -118,6 +127,9 @@ object PreferenceKeys {
     const val MAX_CONCURRENT_DOWNLOADS = "max_parallel_downloads"
     const val DOWNLOAD_PATH = "download_path"
     const val EXTERNAL_DOWNLOAD_PROVIDER = "external_download_provider"
+    const val EXTERNAL_DOWNLOADER_PACKAGE = "external_downloader_package"
+    const val DEFAULT_DOWNLOAD_VIDEO_QUALITY = "default_download_video_quality"
+    const val DEFAULT_DOWNLOAD_AUDIO_QUALITY = "default_download_audio_quality"
     const val MEDIA_VISIBLE = "media_visible"
     const val FULL_LOCAL_MODE = "full_local_mode"
     const val LOCAL_RYD = "local_return_youtube_dislikes"
